@@ -3,39 +3,46 @@ import Link from "next/link";
 
 export default function Category() {
   return (
-    <div className="hidden md:flex bg-white rounded-3xl xl:rounded-full p-4 shadow-lg items-center justify-center gap-8 ">
+    <div className="hidden md:flex bg-white rounded-3xl xl:rounded-full p-4 shadow-lg items-center justify-between gap-8">
       {/* links */}
-      <div className="flex-1 flex items-center justify-between flex-wrap">
-        <Link
-          href="/posts"
-          className="bg-blue-800 text-white rounded-full p-4 py-2"
-        >
+      <div className="flex items-center space-x-4">
+        <CategoryLink href="/posts" active>
           All Posts
-        </Link>
-        <Link
-          href="/posts"
-          className="hover:bg-blue-50 text-white rounded-full p-4 py-2"
-        >
-          Masjid
-        </Link>
-        <Link
-          href="/posts"
-          className="hover:bg-blue-50 text-white rounded-full p-4 py-2"
-        >
-          Artikel
-        </Link>
+        </CategoryLink>
+        <CategoryLink href="/posts/masjid">Masjid</CategoryLink>
+        <CategoryLink href="/posts/artikel">Artikel</CategoryLink>
       </div>
-      <span className="text-xl font-medium">|</span>
+      <div className="h-8 w-px bg-gray-300" aria-hidden="true" />
       {/* search */}
-      <div className="bg-gray-100 p-2 rounded-full flex items-center gap-2">
-        <IconSearch className="text-white" />
-
+      <div className="relative flex-shrink-0">
+        <IconSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
         <input
           type="text"
-          placeholder="search a post"
-          className="bg-transparent"
+          placeholder="Search a post"
+          className="pl-10 pr-4 py-2 w-64 bg-gray-100 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all duration-300"
         />
       </div>
     </div>
+  );
+}
+
+interface CategoryLinkProps {
+  href: string;
+  children: React.ReactNode;
+  active?: boolean;
+}
+
+function CategoryLink({ href, children, active = false }: CategoryLinkProps) {
+  return (
+    <Link
+      href={href}
+      className={`${
+        active
+          ? "bg-blue-600 text-white"
+          : "text-gray-700 hover:bg-blue-50 hover:text-blue-600"
+      } rounded-full px-4 py-2 font-medium transition-all duration-300`}
+    >
+      {children}
+    </Link>
   );
 }
