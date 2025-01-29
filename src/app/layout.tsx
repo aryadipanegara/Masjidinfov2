@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { MantineProvider, mantineHtmlProps } from "@mantine/core";
-import "@mantine/core/styles.css";
 
 import Navbar from "@/components/navbar";
 
@@ -27,14 +25,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" {...mantineHtmlProps}>
+    <html lang="en">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased px-4 md:px-8 lgLpx-32 2xl:px-64`}
       >
-        <MantineProvider>
-          <Navbar />
-          {children}
-        </MantineProvider>
+        <Navbar />
+        {children}
       </body>
     </html>
   );

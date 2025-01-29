@@ -1,38 +1,46 @@
 "use client";
 
-import { useState } from "react";
-import { Button, Burger, Drawer, Group, Stack } from "@mantine/core";
-import { useDisclosure } from "@mantine/hooks";
 import Link from "next/link";
 import Image from "next/image";
+import { useState } from "react";
+import { Menu } from "lucide-react";
 
-const Navbar = () => {
-  const [opened, { toggle, close }] = useDisclosure(false);
+import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
-  const navLinks = [
-    { href: "/", label: "Home" },
-    { href: "/trending", label: "Trending" },
-    { href: "/popular", label: "Most Popular" },
-    { href: "/about", label: "About" },
-  ];
+const navLinks = [
+  { href: "/", label: "Home" },
+  { href: "/trending", label: "Trending" },
+  { href: "/popular", label: "Most Popular" },
+  { href: "/about", label: "About" },
+];
 
-  const NavItems = () => (
-    <>
-      {navLinks.map((link) => (
-        <Link
-          key={link.href}
-          href={link.href}
-          className="text-gray-700 hover:text-blue-600 transition-colors"
-          onClick={close}
-        >
-          {link.label}
-        </Link>
-      ))}
-      <Button component={Link} href="/login" radius="xl" size="md">
-        Login
-      </Button>
-    </>
-  );
+const NavItems = ({
+  className,
+  onClick,
+}: {
+  className?: string;
+  onClick?: () => void;
+}) => (
+  <div className={`flex flex-col md:flex-row items-center gap-4 ${className}`}>
+    {navLinks.map((link) => (
+      <Link
+        key={link.href}
+        href={link.href}
+        className="text-gray-700 hover:text-blue-600 transition-colors"
+        onClick={onClick}
+      >
+        {link.label}
+      </Link>
+    ))}
+    <Button asChild>
+      <Link href="/login">Login</Link>
+    </Button>
+  </div>
+);
+
+export function Navbar() {
+  const [isOpen, setIsOpen] = useState(false);
 
   return (
     <header className="w-full h-20 border-b">
@@ -43,32 +51,25 @@ const Navbar = () => {
         </Link>
 
         {/* Desktop Menu */}
-        <Group gap="xl" visibleFrom="md">
+        <div className="hidden md:flex">
           <NavItems />
-        </Group>
+        </div>
 
         {/* Mobile Menu */}
-        <Burger opened={opened} onClick={toggle} hiddenFrom="md" size="sm" />
-        <Drawer
-          opened={opened}
-          onClose={close}
-          size="100%"
-          padding="md"
-          hiddenFrom="md"
-          zIndex={1000}
-        >
-          <Stack
-            align="center"
-            justify="center"
-            h="100%"
-            className="text-center justify-center items-center gap-8 "
-          >
-            <NavItems />
-          </Stack>
-        </Drawer>
+        <Sheet open={isOpen} onOpenChange={setIsOpen}>
+          <SheetTrigger asChild>
+            <Button variant="outline" size="icon" className="md:hidden">
+              <Menu className="h-6 w-6" />
+              <span className="sr-only">Toggle menu</span>
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="right" className="w-[100%] sm:w-[540px]">
+            <NavItems className="mt-8" onClick={() => setIsOpen(false)} />
+          </SheetContent>
+        </Sheet>
       </nav>
     </header>
   );
-};
+}
 
 export default Navbar;
