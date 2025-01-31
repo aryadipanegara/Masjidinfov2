@@ -2,11 +2,12 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useState } from "react";
 import { Menu } from "lucide-react";
-
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { getSession } from "@/lib/getSession"; // Ambil sesi dari server
+import { useEffect, useState } from "react";
+import { handleSignOut } from "@/lib/signOutServerAction";
 
 const navLinks = [
   { href: "/", label: "Home" },
@@ -15,32 +16,17 @@ const navLinks = [
   { href: "/about", label: "About" },
 ];
 
-const NavItems = ({
-  className,
-  onClick,
-}: {
-  className?: string;
-  onClick?: () => void;
-}) => (
-  <div className={`flex flex-col md:flex-row items-center gap-4 ${className}`}>
-    {navLinks.map((link) => (
-      <Link
-        key={link.href}
-        href={link.href}
-        className="text-gray-700 hover:text-blue-600 transition-colors"
-        onClick={onClick}
-      >
-        {link.label}
-      </Link>
-    ))}
-    <Button asChild>
-      <Link href="/login">Login</Link>
-    </Button>
-  </div>
-);
-
 export function Navbar() {
+  const [session, setSession] = useState<any>(null);
   const [isOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
+    const fetchSession = async () => {
+      const sessionData = await getSession();
+      setSession(sessionData);
+    };
+    fetchSession();
+  }, []);
 
   return (
     <header className="w-full h-20 border-b">
@@ -51,8 +37,24 @@ export function Navbar() {
         </Link>
 
         {/* Desktop Menu */}
-        <div className="hidden md:flex">
-          <NavItems />
+        <div className="hidden md:flex items-center gap-4">
+          {navLinks.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              className="text-gray-700 hover:text-blue-600 transition-colors"
+            >
+              {link.label}
+            </Link>
+          ))}
+
+          {session ? (
+            <Button onClick={() => handleSignOut()}>Logout</Button>
+          ) : (
+            <Button>
+              <Link href="/auth/signIn">Login</Link>
+            </Button>
+          )}
         </div>
 
         {/* Mobile Menu */}
@@ -64,7 +66,29 @@ export function Navbar() {
             </Button>
           </SheetTrigger>
           <SheetContent side="right" className="w-[100%] sm:w-[540px]">
-            <NavItems className="mt-8" onClick={() => setIsOpen(false)} />
+            <div className="mt-8 flex flex-col items-center gap-4">
+              {navLinks.map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className="text-gray-700 hover:text-blue-600 transition-colors"
+                  onClick={() => setIsOpen(false)}
+                >
+                  {link.label}
+                </Link>
+              ))}
+
+              {/* Jika sudah login, tampilkan Logout */}
+              {session ? (
+                <Button asChild>
+                  <Link href="/auth/signOut">Logout</Link>
+                </Button>
+              ) : (
+                <Button asChild>
+                  <Link href="/auth/signIn">Login</Link>
+                </Button>
+              )}
+            </div>
           </SheetContent>
         </Sheet>
       </nav>

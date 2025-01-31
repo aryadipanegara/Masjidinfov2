@@ -3,7 +3,7 @@ import FeaturedPost from "@/components/featuredPost";
 import PostList from "@/components/postList";
 import Link from "next/link";
 
-export default function Home() {
+const Home: React.FC = async () => {
   return (
     <div className="mt-4 flex flex-col gap-4">
       {/* BeadCrumb */}
@@ -72,4 +72,6 @@ export default function Home() {
       </div>
     </div>
   );
-}
+};
+
+export default Home;
