@@ -80,11 +80,9 @@ export function Navbar() {
 
               {/* Jika sudah login, tampilkan Logout */}
               {session ? (
-                <Button asChild>
-                  <Link href="/auth/signOut">Logout</Link>
-                </Button>
+                <Button onClick={() => handleSignOut()}>Logout</Button>
               ) : (
-                <Button asChild>
+                <Button>
                   <Link href="/auth/signIn">Login</Link>
                 </Button>
               )}
