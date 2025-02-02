@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { middleware } from "@/lib/middleware";
 
 // GET: Mendapatkan semua posts
 export async function GET() {

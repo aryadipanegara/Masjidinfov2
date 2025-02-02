@@ -12,8 +12,8 @@ export async function GET(
     const post = await prisma.post.findUnique({
       where: { slug },
       include: {
-        user: true, // Include data user yang membuat post
-        comments: true, // Include data komentar
+        user: true,
+        comments: true,
       },
     });
 
