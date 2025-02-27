@@ -5,9 +5,7 @@ import Image from "next/image";
 import { Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { getSession } from "@/lib/getSession"; // Ambil sesi dari server
 import { useEffect, useState } from "react";
-import { handleSignOut } from "@/lib/signOutServerAction";
 
 const navLinks = [
   { href: "/", label: "Home" },
@@ -19,14 +17,6 @@ const navLinks = [
 export function Navbar() {
   const [session, setSession] = useState<any>(null);
   const [isOpen, setIsOpen] = useState(false);
-
-  useEffect(() => {
-    const fetchSession = async () => {
-      const sessionData = await getSession();
-      setSession(sessionData);
-    };
-    fetchSession();
-  }, []);
 
   return (
     <header className="w-full h-20 border-b">
@@ -47,14 +37,6 @@ export function Navbar() {
               {link.label}
             </Link>
           ))}
-
-          {session ? (
-            <Button onClick={() => handleSignOut()}>Logout</Button>
-          ) : (
-            <Button>
-              <Link href="/auth/signIn">Login</Link>
-            </Button>
-          )}
         </div>
 
         {/* Mobile Menu */}
@@ -77,15 +59,6 @@ export function Navbar() {
                   {link.label}
                 </Link>
               ))}
-
-              {/* Jika sudah login, tampilkan Logout */}
-              {session ? (
-                <Button onClick={() => handleSignOut()}>Logout</Button>
-              ) : (
-                <Button>
-                  <Link href="/auth/signIn">Login</Link>
-                </Button>
-              )}
             </div>
           </SheetContent>
         </Sheet>
