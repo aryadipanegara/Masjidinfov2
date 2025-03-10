@@ -8,24 +8,40 @@ export const register = async (req: Request, res: Response) => {
   try {
     const { name, email, password } = req.body;
 
-    // validasi input dengan Zod
+    // Validasi input dengan Zod
     const validation = registerSchema.safeParse(req.body);
     if (!validation.success) {
       return res.status(400).json({ error: validation.error.errors });
     }
 
-    // cek apakah email sudah terdaftar
-    const existingUser = await prisma.user.findUnique({
-      where: { email },
-    });
+    // Cek apakah email sudah terdaftar
+    const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
       return res.status(400).json({ error: "Email sudah digunakan" });
     }
 
-    // hash Password
+    // Hash Password
     const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Simpan user ke database
+    const newUser = await prisma.user.create({
+      data: {
+        name,
+        email,
+        password: hashedPassword,
+      },
+    });
+
+    // Buat token JWT
+    const token = jwt.sign(
+      { id: newUser.id, email: newUser.email, role: newUser.role },
+      process.env.JWT_SECRET as string,
+      { expiresIn: "7d" }
+    );
+
+    return res.status(201).json({ message: "Registrasi berhasil", token });
   } catch (error) {
-    res.status(500).json({ error: "Terjadi kesalahan pada server" });
+    return res.status(500).json({ error: "Terjadi kesalahan pada server" });
   }
 };
 
