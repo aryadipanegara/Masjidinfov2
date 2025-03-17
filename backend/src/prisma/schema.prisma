@@ -19,18 +19,19 @@ enum Role {
 }
 
 model User {
-  id            String    @id @default(uuid()) // Gunakan UUID untuk keamanan lebih baik
+  id            String    @id @default(uuid()) // UUID lebih aman
   name          String?
   email         String    @unique
   emailVerified DateTime?
-  password      String    
-  image         String?   // Gambar profil jika ada
+  password      String
+  image         String?   // Foto profil user
   role          Role      @default(USER)
+  refreshToken  String?   // Simpan refresh token di sini
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  accounts      Account[] // Relasi ke Account
-  sessions      Session[] // Relasi ke Session
+  accounts      Account[] // Relasi ke Account (OAuth)
+  sessions      Session[] // Relasi ke Session (NextAuth/session-based)
   posts         Post[]    // Relasi ke Post
   comments      Comment[] // Relasi ke Comment
 }
@@ -39,12 +40,11 @@ model Account {
   id                String  @id @default(uuid()) 
   userId            String
   user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  provider          String  // "credentials" untuk login manual
-  providerAccountId String  // Bisa pakai email sebagai ID unik
-  refresh_token     String?
+  provider          String  // "credentials" atau "google", "github", dll.
+  providerAccountId String  // ID dari provider (misal: Google UID, GitHub ID)
   access_token      String?
   expires_at        Int?
-  
+
   @@unique([provider, providerAccountId])
 }
 
@@ -59,7 +59,7 @@ model Session {
 model VerificationToken {
   id         String   @id @default(uuid())
   identifier String   @unique // Email user
-  token      String   @unique // Token unik untuk verifikasi email
+  token      String   @unique // Token verifikasi email
   expires    DateTime
 
   @@unique([identifier, token])

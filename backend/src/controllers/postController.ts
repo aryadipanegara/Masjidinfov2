@@ -1,100 +1,86 @@
-import { Request, Response, NextFunction } from "express";
-import { postService } from "../services/postService";
+import { Request, Response } from "express";
+import {
+  createPost,
+  getPostBySlug,
+  updatePost,
+  deletePost,
+  getAllPosts,
+} from "../services/postService";
 
-export const getAllPosts = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> => {
+export const createPostHandler = async (req: Request, res: Response) => {
   try {
-    const posts = await postService.getAllPosts();
-    res.json(posts);
-  } catch (error) {
-    next(error);
+    const { title, image, slug, desc, content, isFeatured, status } = req.body;
+    const userId = (req as any).user.id; // Ambil userId dari token
+
+    console.log(userId);
+
+    if (!userId) {
+      res
+        .status(400)
+        .json({ error: "Akses ditolak. Hanya admin yang diizinkan" });
+      return;
+    }
+
+    const post = await createPost({
+      title,
+      image,
+      slug,
+      desc,
+      content,
+      isFeatured,
+      status,
+      user: { connect: { id: userId } },
+    });
+
+    res.status(201).json(post);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
   }
 };
 
-export const getPostById = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> => {
+export const getPostBySlugHandler = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
-    const post = await postService.getPostById(id);
+    const { slug } = req.params;
+    const post = await getPostBySlug(slug);
 
     if (!post) {
-      res.status(404).json({ error: "Post tidak ditemukan" });
-      return;
+      res.status(404).json({ error: "Post tidak ditemukan" }); // Tidak perlu return
+      return; // Hentikan eksekusi
     }
 
+    res.json(post); // Tidak perlu return
+  } catch (error: any) {
+    res.status(400).json({ error: error.message }); // Tidak perlu return
+  }
+};
+
+export const updatePostHandler = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const postData = req.body;
+    const post = await updatePost(id, postData);
     res.json(post);
-  } catch (error) {
-    next(error);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
   }
 };
 
-export const createPost = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> => {
+export const deletePostHandler = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user.id; // ID pengguna dari token JWT
-    const { title, content, image } = req.body;
-
-    if (!title || !content) {
-      res.status(400).json({ error: "Title dan Content harus diisi" });
-      return;
-    }
-
-    const newPost = await postService.createPost(userId, {
-      title,
-      content,
-      image,
-    });
-
-    res.status(201).json(newPost);
-  } catch (error) {
-    next(error);
-  }
-};
-
-export const updatePost = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> => {
-  try {
-    const userId = (req as any).user.id; // ID pengguna dari token JWT
     const { id } = req.params;
-    const { title, content, image } = req.body;
-
-    const updatedPost = await postService.updatePost(id, userId, {
-      title,
-      content,
-      image,
-    });
-
-    res.json(updatedPost);
-  } catch (error) {
-    next(error);
+    await deletePost(id);
+    res.status(204).send();
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
   }
 };
 
-export const deletePost = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> => {
+export const getAllPostsHandler = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user.id; // ID pengguna dari token JWT
-    const { id } = req.params;
-
-    await postService.deletePost(id, userId);
-
-    res.json({ message: "Post berhasil dihapus" });
-  } catch (error) {
-    next(error);
+    const { status } = req.query;
+    const posts = await getAllPosts(status as string);
+    res.json(posts);
+  } catch (error: any) {
+    res.status(400).json({ error: error.message });
   }
 };

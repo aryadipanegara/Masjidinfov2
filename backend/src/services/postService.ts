@@ -1,80 +1,38 @@
-import { PrismaClient } from "@prisma/client";
+import prisma from "../prisma/prismaClient";
+import { Post, Prisma } from "@prisma/client";
 
-const prisma = new PrismaClient();
+export const createPost = async (
+  postData: Prisma.PostCreateInput
+): Promise<Post> => {
+  const post = await prisma.post.create({
+    data: postData,
+  });
+  return post;
+};
+export const getPostBySlug = async (slug: string): Promise<Post | null> => {
+  const post = await prisma.post.findUnique({
+    where: { slug },
+    include: { user: true, comments: true },
+  });
+  return post; // Pastikan ini mengembalikan tipe yang benar
+};
+export const updatePost = async (
+  id: string,
+  postData: Prisma.PostUpdateInput
+) => {
+  return await prisma.post.update({
+    where: { id },
+    data: postData,
+  });
+};
 
-export const postService = {
-  async getAllPosts() {
-    return await prisma.post.findMany({
-      include: {
-        user: {
-          select: { id: true, name: true, email: true },
-        },
-        comments: true,
-      },
-    });
-  },
+export const deletePost = async (id: string) => {
+  return await prisma.post.delete({ where: { id } });
+};
 
-  async getPostById(id: string) {
-    return await prisma.post.findUnique({
-      where: { id },
-      include: {
-        user: {
-          select: { id: true, name: true, email: true },
-        },
-        comments: true,
-      },
-    });
-  },
-
-  async createPost(
-    userId: string,
-    data: { title: string; content: string; image?: string }
-  ) {
-    return await prisma.post.create({
-      data: {
-        title: data.title,
-        content: data.content,
-        image: data.image,
-        slug: data.title.toLowerCase().replace(/ /g, "-"),
-        userId,
-      },
-    });
-  },
-
-  async updatePost(
-    id: string,
-    userId: string,
-    data: { title?: string; content?: string; image?: string }
-  ) {
-    const post = await prisma.post.findUnique({ where: { id } });
-
-    if (!post) {
-      throw new Error("Post tidak ditemukan");
-    }
-
-    if (post.userId !== userId) {
-      throw new Error("Anda tidak memiliki izin untuk mengedit post ini");
-    }
-
-    return await prisma.post.update({
-      where: { id },
-      data,
-    });
-  },
-
-  async deletePost(id: string, userId: string) {
-    const post = await prisma.post.findUnique({ where: { id } });
-
-    if (!post) {
-      throw new Error("Post tidak ditemukan");
-    }
-
-    if (post.userId !== userId) {
-      throw new Error("Anda tidak memiliki izin untuk menghapus post ini");
-    }
-
-    return await prisma.post.delete({
-      where: { id },
-    });
-  },
+export const getAllPosts = async (status?: string) => {
+  return await prisma.post.findMany({
+    where: status ? { status } : undefined,
+    include: { user: true },
+  });
 };

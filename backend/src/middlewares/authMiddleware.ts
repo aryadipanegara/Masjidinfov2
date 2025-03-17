@@ -15,9 +15,11 @@ export const authMiddleware = (
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as {
-      id: string;
+      id: string; // userId
+      email: string;
+      role: string;
     };
-    (req as any).user = decoded;
+    (req as any).user = decoded; // Simpan user (termasuk userId) di req
     next();
   } catch (error) {
     res.status(403).json({ error: "Token tidak valid" });
