@@ -10,9 +10,7 @@ import {
 export const createPostHandler = async (req: Request, res: Response) => {
   try {
     const { title, image, slug, desc, content, isFeatured, status } = req.body;
-    const userId = (req as any).user.id; // Ambil userId dari token
-
-    console.log(userId);
+    const userId = (req as any).user.id;
 
     if (!userId) {
       res
@@ -44,13 +42,13 @@ export const getPostBySlugHandler = async (req: Request, res: Response) => {
     const post = await getPostBySlug(slug);
 
     if (!post) {
-      res.status(404).json({ error: "Post tidak ditemukan" }); // Tidak perlu return
-      return; // Hentikan eksekusi
+      res.status(404).json({ error: "Post tidak ditemukan" });
+      return;
     }
 
-    res.json(post); // Tidak perlu return
+    res.json(post);
   } catch (error: any) {
-    res.status(400).json({ error: error.message }); // Tidak perlu return
+    res.status(400).json({ error: error.message });
   }
 };
 
