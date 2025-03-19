@@ -6,6 +6,7 @@ import {
   deletePost,
   getAllPosts,
 } from "../services/postService";
+import { errorResponse, successResponse } from "../utils/responseUtil";
 
 export const createPostHandler = async (req: Request, res: Response) => {
   try {
@@ -13,10 +14,12 @@ export const createPostHandler = async (req: Request, res: Response) => {
     const userId = (req as any).user.id;
 
     if (!userId) {
-      res
-        .status(400)
-        .json({ error: "Akses ditolak. Hanya admin yang diizinkan" });
-      return;
+      return errorResponse(
+        res,
+        "Akses di tolak. Hanya admin yang diizinkan",
+        "Bad Request",
+        400
+      );
     }
 
     const post = await createPost({
@@ -30,9 +33,14 @@ export const createPostHandler = async (req: Request, res: Response) => {
       user: { connect: { id: userId } },
     });
 
-    res.status(201).json(post);
+    return successResponse(res, post, "Post berhasil dibuat", 201);
   } catch (error: any) {
-    res.status(400).json({ error: error.message });
+    return errorResponse(
+      res,
+      error.message || "Terjadi kesalahan saat membuat post",
+      "Bad Request",
+      400
+    );
   }
 };
 
@@ -42,13 +50,17 @@ export const getPostBySlugHandler = async (req: Request, res: Response) => {
     const post = await getPostBySlug(slug);
 
     if (!post) {
-      res.status(404).json({ error: "Post tidak ditemukan" });
-      return;
+      return errorResponse(res, "Post tidak ditemukan", "Not Found", 404);
     }
 
-    res.json(post);
+    return successResponse(res, post, "Post retrieved successfully");
   } catch (error: any) {
-    res.status(400).json({ error: error.message });
+    return errorResponse(
+      res,
+      error.message || "Terjadi kesalahan saat mengambil post",
+      "Bad Request",
+      400
+    );
   }
 };
 
@@ -57,9 +69,14 @@ export const updatePostHandler = async (req: Request, res: Response) => {
     const { id } = req.params;
     const postData = req.body;
     const post = await updatePost(id, postData);
-    res.json(post);
+    return successResponse(res, post, "Post updated successfully");
   } catch (error: any) {
-    res.status(400).json({ error: error.message });
+    return errorResponse(
+      res,
+      error.message || "Terjadi kesalahan saat mengupdate post",
+      "Bad Request",
+      400
+    );
   }
 };
 
@@ -67,9 +84,14 @@ export const deletePostHandler = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     await deletePost(id);
-    res.status(204).send();
+    return successResponse(res, null, "Post deleted successfully", 204);
   } catch (error: any) {
-    res.status(400).json({ error: error.message });
+    return errorResponse(
+      res,
+      error.message || "Terjadi kesalahan saat menghapus post",
+      "Bad Request",
+      400
+    );
   }
 };
 
@@ -77,8 +99,13 @@ export const getAllPostsHandler = async (req: Request, res: Response) => {
   try {
     const { status } = req.query;
     const posts = await getAllPosts(status as string);
-    res.json(posts);
+    return successResponse(res, posts, "Posts retrieved successfully", 200);
   } catch (error: any) {
-    res.status(400).json({ error: error.message });
+    return errorResponse(
+      res,
+      error.message || "Terjadi kesalahan saat mengambil post",
+      "Bad Request",
+      400
+    );
   }
 };
