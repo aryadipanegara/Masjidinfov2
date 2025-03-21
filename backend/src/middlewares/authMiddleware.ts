@@ -1,6 +1,8 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 
+import { errorResponse } from "../utils/responseUtil";
+
 export const authMiddleware = (
   req: Request,
   res: Response,
@@ -9,19 +11,23 @@ export const authMiddleware = (
   const token = req.header("Authorization")?.split(" ")[1];
 
   if (!token) {
-    res.status(401).json({ error: "Akses ditolak. Token tidak ditemukan" });
-    return;
+    return errorResponse(
+      res,
+      "Akses ditolak. Token tidak ditemukan",
+      "Unauthorized",
+      401
+    );
   }
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as {
-      id: string; // userId
+      id: string;
       email: string;
       role: string;
     };
-    (req as any).user = decoded; // Simpan user (termasuk userId) di req
+    (req as any).user = decoded;
     next();
   } catch (error) {
-    res.status(403).json({ error: "Token tidak valid" });
+    return errorResponse(res, "Token tidak valid", "Forbidden", 403);
   }
 };
