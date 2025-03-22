@@ -1,4 +1,17 @@
 import PostListItem from "./postListItem";
+import axios from "axios";
+
+const fetchPosts = async () => {
+  try {
+    const res = await axios.get(
+      `${process.env.NEXT_PUBLIC_API_URL}/api/posts/`
+    );
+    return res.data;
+  } catch (error) {
+    console.error("Error fetching posts:", error);
+    return null;
+  }
+};
 
 export default function PostList() {
   return (
