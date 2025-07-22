@@ -13,113 +13,189 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-/// Tipe konten: masjid vs cerita
+
+// ---------------- ENUMS ----------------
 enum PostType {
   masjid
-  cerita
+  artikel
 }
 
-/// Role user
 enum UserRole {
-  admin
-  editor
-  viewer
+  SUPER_ADMIN
+  ADMIN
+  EDITOR
+  VIEWER
 }
+
+enum OTPPurpose {
+  REGISTER
+  FORGOT_PASSWORD
+  CHANGE_EMAIL
+}
+
+// ---------------- MODELS ----------------
 
 model User {
-  id        String   @id @default(uuid()) @db.Uuid
-  name      String
-  email     String   @unique
-  image     String?
-  role      UserRole @default(viewer)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id               String           @id @default(ulid())
+  email            String           @unique
+  fullname         String
+  passwordHash     String?
+  isVerified       Boolean          @default(false)
+  isBanned         Boolean          @default(false)
+  bannedAt         DateTime?
+  bannedReason     String?
+  role             UserRole         @default(VIEWER)
+  avatar           String?
+  hasGoogleAccount Boolean          @default(false)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
 
-  posts    Post[]
-  accounts Account[]
-  sessions Session[]
+  posts            Post[]           @relation("userPosts")
+  otpVerifications OTPVerification[] @relation("otpVerifications")
+  accounts         Account[]        @relation("userAccounts")
+  sessions         Session[]        @relation("userPrismaSessions")
+  userSessions     UserSession[]    @relation("userSessions")
+
+  @@index([email])
+  @@index([hasGoogleAccount])
+  @@map("user")
 }
 
 model Account {
-  id                String  @id @default(uuid()) @db.Uuid
-  userId            String  @db.Uuid
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String?
-  access_token      String?
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String?
-  session_state     String?
+  id                   String    @id @default(ulid())
+  userId               String    @map("user_id")
+  type                 String    @map("type")
+  provider             String    @map("provider")
+  providerAccountId    String    @map("provider_account_id")
+  refreshToken         String?   @map("refresh_token")
+  accessToken          String?   @map("access_token")
+  expiresAt            Int?      @map("expires_at")
+  tokenType            String?   @map("token_type")
+  scope                String?   @map("scope")
+  idToken              String?   @map("id_token")
+  sessionState         String?   @map("session_state")
+  isBanned             Boolean   @default(false) @map("is_banned")
+  bannedAt             DateTime? @map("banned_at")
+  bannedReason         String?   @map("banned_reason")
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user                 User      @relation("userAccounts", fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
+  @@map("account")
 }
 
 model Session {
-  id           String   @id @default(uuid()) @db.Uuid
-  sessionToken String   @unique
-  userId       String   @db.Uuid
-  expires      DateTime
+  id           String   @id @default(ulid())
+  sessionToken String   @unique @map("session_token")
+  userId       String   @map("user_id")
+  expires      DateTime @map("expires")
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User     @relation("userPrismaSessions", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("session")
 }
 
-model VerificationToken {
-  identifier String
-  token      String   @unique
-  expires    DateTime
+model OTPVerification {
+  id         String     @id @default(ulid())
+  userId     String     @map("user_id")
+  code       String     @map("code")
+  purpose    OTPPurpose @map("purpose")
+  expiresAt  DateTime   @map("expires_at")
+  isUsed     Boolean    @default(false) @map("is_used")
+  createdAt  DateTime   @default(now()) @map("created_at")
 
-  @@unique([identifier, token])
+  user       User       @relation("otpVerifications", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("otp_verification")
 }
 
-model Category {
-  id   String @id @default(uuid()) @db.Uuid
-  name String @unique
+model UserSession {
+  id        String   @id @default(ulid())
+  userId    String   @map("user_id")
+  ip        String   @map("ip")
+  userAgent String   @map("user_agent")
+  createdAt DateTime @default(now()) @map("created_at")
 
-  posts PostCategory[]
+  user      User     @relation("userSessions", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_session")
+}
+
+// ---------------- CONTENT MODELS ----------------
+
+model Post {
+  id          String        @id @default(ulid())
+  type        PostType      @map("type")
+  title       String        @map("title")
+  slug        String        @unique @map("slug")
+  excerpt     String?       @map("excerpt")
+  content     String        @db.Text @map("content")
+  coverImage  String?       @map("cover_image")
+  tags        String[]      @map("tags")
+  publishedAt DateTime      @default(now()) @map("published_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+  isDeleted   Boolean       @default(false) @map("is_deleted")
+
+  authorId    String        @map("author_id")
+  author      User          @relation("userPosts", fields: [authorId], references: [id], onDelete: Restrict)
+
+  categories  PostCategory[]
+  images      Image[]
+  masjidInfo  Masjid?
+
+  @@map("post")
 }
 
 model PostCategory {
+  postId     String   @map("post_id")
+  categoryId String   @map("category_id")
+
   post       Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
-  postId     String   @db.Uuid
   category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  categoryId String   @db.Uuid
 
   @@id([postId, categoryId])
+  @@map("post_category")
 }
 
-model Post {
-  id          String   @id @default(uuid()) @db.Uuid
-  type        PostType
-  title       String
-  slug        String   @unique
-  excerpt     String?
-  content     String
-  coverImage  String?
-  tags        String[]
-  publishedAt DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  isDeleted   Boolean  @default(false)
+model Category {
+  id     String          @id @default(ulid())
+  name   String          @unique @map("name")
 
-  authorId String @db.Uuid
-  author   User   @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  posts  PostCategory[]
 
-  categories PostCategory[]
-  images     Image[]
+  @@map("category")
 }
 
 model Image {
-  id         String   @id @default(uuid()) @db.Uuid
-  url        String
-  altText    String?
-  caption    String?
-  order      Int      @default(0)
-  uploadedAt DateTime @default(now())
+  id         String   @id @default(ulid())
+  url        String   @map("url")
+  altText    String?  @map("alt_text")
+  caption    String?  @map("caption")
+  order      Int      @default(0) @map("order")
+  uploadedAt DateTime @default(now()) @map("uploaded_at")
 
-  postId String? @db.Uuid
-  post   Post?   @relation(fields: [postId], references: [id], onDelete: SetNull)
+  postId     String?  @map("post_id")
+  post       Post?    @relation(fields: [postId], references: [id], onDelete: SetNull)
+
+  @@map("image")
+}
+
+model Masjid {
+  id            String   @id @default(ulid())
+  postId        String   @unique @map("post_id")
+
+  namaLokal     String?  @map("nama_lokal")
+  alamat        String?  @map("alamat")
+  kota          String?  @map("kota")
+  provinsi      String?  @map("provinsi")
+  negara        String?  @map("negara")
+  tahunDibangun String?  @map("tahun_dibangun")
+  arsitek       String?  @map("arsitek")
+  gaya          String?  @map("gaya")
+  mapsUrl       String?  @map("maps_url")
+  sumberFoto    String?  @map("sumber_foto")
+
+  post          Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@map("masjid")
 }

@@ -1,47 +1,62 @@
-import "dotenv/config";
 import express from "express";
+import swaggerUi from "swagger-ui-express";
+import swaggerJSDoc from "swagger-jsdoc";
 import session from "express-session";
+import cors from "cors";
+import morgan from "morgan";
+import { ENV } from "./config/env.config";
+import authRoutes from "./routes/auth.route";
+import userRoutes from "./routes/user.routes";
 import passport from "passport";
-import { PORT, JWT_SECRET } from "./config";
-import authRoutes from "./routes/auth.routes";
-import postsRoutes from "./routes/post.routes";
-import "./middleware/passport";
+import cookieParser from "cookie-parser";
 
 const app = express();
 
+const swaggerOptions = {
+  definition: {
+    openapi: "3.0.0",
+    info: {
+      title: "MasjidInfo API",
+      version: "2.0.0",
+      description: "Dokumentasi REST API MasjidInfo",
+    },
+    servers: [
+      {
+        url: "http://localhost:3000",
+      },
+    ],
+  },
+  apis: ["./src/routes/*.ts"],
+};
+
+const swaggerSpec = swaggerJSDoc(swaggerOptions);
+
+app.use(cors({ origin: "http://localhost:5173" }));
+app.use(morgan("dev"));
 app.use(express.json());
+app.use(cookieParser());
+
 app.use(
   session({
-    secret: JWT_SECRET,
+    secret: ENV.SESSION_SECRET,
     resave: false,
     saveUninitialized: false,
+    cookie: { secure: false, maxAge: 1000 * 60 * 10 },
   })
 );
+
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
 app.use(passport.initialize());
 app.use(passport.session());
 
-// Health check
-app.get("/health", (_req, res) => res.send("OK"));
-
-// Auth endpoints
 app.use("/api/auth", authRoutes);
-app.use("/api/posts", postsRoutes);
+app.use("/api", userRoutes);
 
-// Global error handler
-app.use(
-  (
-    err: any,
-    _req: express.Request,
-    res: express.Response,
-    _next: express.NextFunction
-  ) => {
-    console.error(err);
-    res
-      .status(err.status || 500)
-      .json({ message: err.message || "Internal Server Error" });
-  }
-);
+app.get("/", (req, res) => {
+  res.json({ message: "API Berjalan!" });
+});
 
-app.listen(PORT, () => {
-  console.log(`🚀 Server listening on http://localhost:${PORT}`);
+app.listen(ENV.PORT, () => {
+  console.log(`Server jalan di http://localhost:${ENV.PORT}`);
 });
