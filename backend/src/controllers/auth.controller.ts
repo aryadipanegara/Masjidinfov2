@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { authService } from "../services/auth.service";
 import { generateToken } from "../services/jwt.service";
+import { setAuthCookie } from "../utils/cookie.util";
 
 export const register = async (req: Request, res: Response) => {
   const { email, fullname, password } = req.body;
@@ -41,6 +42,8 @@ export const login = async (req: Request, res: Response) => {
       password
     );
 
+    setAuthCookie(res, token);
+
     if (requiresGoogle) {
       return res.json({
         message: "Login berhasil, tapi Anda belum connect ke Google",
@@ -49,7 +52,7 @@ export const login = async (req: Request, res: Response) => {
       });
     }
 
-    res.json({ token });
+    res.json({ message: "Login berhasil" });
   } catch (err: any) {
     res.status(401).json({ error: err.message });
   }
@@ -58,29 +61,39 @@ export const login = async (req: Request, res: Response) => {
 export const forgotPassword = async (req: Request, res: Response) => {
   const { email } = req.body;
 
-  try {
-    if (!email) {
-      return res.status(400).json({ error: "Email wajib diisi" });
-    }
+  if (!email) {
+    return res.status(400).json({ error: "Email wajib diisi." });
+  }
 
+  try {
     await authService.forgotPassword(email);
-    res.json({ message: "Jika email valid, OTP telah dikirim." });
+    res.json({
+      message: "Jika email terdaftar, link reset password telah dikirim.",
+    });
   } catch (err: any) {
-    res.status(500).json({ error: "Terjadi kesalahan saat mengirim OTP." });
+    console.error("Forgot Password Error:", err);
+    res
+      .status(500)
+      .json({ error: "Terjadi kesalahan saat memproses permintaan." });
   }
 };
 
 export const resetPassword = async (req: Request, res: Response) => {
-  const { email, code, newPassword } = req.body;
+  const { token, newPassword } = req.body;
+
+  if (!token || !newPassword) {
+    return res
+      .status(400)
+      .json({ error: "Token dan password baru wajib diisi." });
+  }
 
   try {
-    if (!email || !code || !newPassword) {
-      return res.status(400).json({ error: "Semua field wajib diisi" });
-    }
-
-    await authService.resetPassword(email, code, newPassword);
-    res.json({ message: "Password berhasil direset. Silakan login kembali." });
+    await authService.resetPassword(token, newPassword);
+    res.json({
+      message: "Password berhasil diperbarui. Silakan login kembali.",
+    });
   } catch (err: any) {
+    console.error("Reset Password Error:", err);
     res.status(400).json({ error: err.message });
   }
 };

@@ -2,7 +2,7 @@ import bcrypt from "bcrypt";
 import { prisma } from "../config/prisma.config";
 import { generateToken } from "./jwt.service";
 import { generateOTP, isOTPExpired } from "../utils/otp.utils";
-import { sendOTP } from "./email.service";
+import { sendOTP, sendResetPasswordLink } from "./email.service";
 import { UserPayload } from "../types/auth.types";
 import { OTPPurpose } from "@prisma/client";
 import { addMinutes } from "date-fns";
@@ -94,42 +94,41 @@ export const authService = {
 
   forgotPassword: async (email: string) => {
     const user = await prisma.user.findUnique({ where: { email } });
-    if (!user) return; // Jangan bocorkan jika email tidak terdaftar
+    if (!user) return;
 
-    const otp = generateOTP();
+    const token = randomBytes(40).toString("hex");
+
     await prisma.oTPVerification.create({
       data: {
         userId: user.id,
-        code: otp,
+        code: token,
         purpose: "FORGOT_PASSWORD",
-        expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+        expiresAt: new Date(Date.now() + 60 * 60 * 1000),
       },
     });
 
-    await sendOTP(email, otp);
+    const resetLink = `${process.env.CLIENT_URL}/reset-password?token=${token}`;
+    await sendResetPasswordLink(email, resetLink);
   },
 
-  resetPassword: async (email: string, code: string, newPassword: string) => {
-    const user = await prisma.user.findUnique({ where: { email } });
-    if (!user) throw new Error("User tidak ditemukan");
-
+  resetPassword: async (token: string, newPassword: string) => {
     const otpRecord = await prisma.oTPVerification.findFirst({
       where: {
-        userId: user.id,
-        code,
+        code: token,
         purpose: "FORGOT_PASSWORD",
         isUsed: false,
       },
+      include: { user: true },
     });
 
     if (!otpRecord || isOTPExpired(otpRecord.expiresAt)) {
-      throw new Error("OTP tidak valid atau sudah kadaluarsa");
+      throw new Error("Token tidak valid atau sudah kedaluwarsa");
     }
 
     const hashed = await bcrypt.hash(newPassword, 10);
 
     await prisma.user.update({
-      where: { id: user.id },
+      where: { id: otpRecord.userId },
       data: { passwordHash: hashed },
     });
 
@@ -138,6 +137,7 @@ export const authService = {
       data: { isUsed: true },
     });
   },
+
   createSession: async (userId: string) => {
     const token = randomBytes(40).toString("hex");
     const expires = addMinutes(new Date(), 60 * 24 * 7); // 7 hari

@@ -223,37 +223,22 @@ router.get(
     failureRedirect: "/api/auth/failure",
   }),
   (req, res) => {
-    const token = (req.user as any)?.token;
-    if (!token) {
-      return res.status(401).json({ error: "Login gagal" });
-    }
-    res.status(200).json({ token });
+    const { token, connected } = req.user as any;
+
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production", // true di production
+      sameSite: "lax", // atau "none" jika beda domain dan pakai HTTPS
+      maxAge: 24 * 60 * 60 * 1000, // 1 hari
+    });
+
+    const redirectUrl = connected
+      ? `${process.env.CLIENT_URL}/settings?connected=true`
+      : `${process.env.CLIENT_URL}/`;
+
+    res.redirect(redirectUrl);
   }
 );
-router.get("/failure", (req, res) => {
-  const message = req.query.message || "Login gagal";
-  res.status(401).json({ error: message });
-});
-
-// Jika sudah ada frontend gunakan ini
-// router.get(
-//   "/google/callback",
-//   passport.authenticate("google", {
-//     session: false,
-//     failureRedirect: "/api/auth/failure",
-//   }),
-//   (req, res) => {
-//     const { token, connected } = req.user as any;
-
-//     // CONNECT mode: redirect ke dashboard/settings
-//     if (connected) {
-//       return res.redirect(`${process.env.CLIENT_URL}/settings?connected=true`);
-//     }
-
-//     // LOGIN mode: kirim token langsung (atau redirect ke /auth/callback?token=...)
-//     res.json({ token });
-//   }
-// );
 
 /**
  * @swagger

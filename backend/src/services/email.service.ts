@@ -45,3 +45,15 @@ export const sendOTP = async (to: string, otp: string): Promise<void> => {
     throw new Error("Gagal mengirim email verifikasi");
   }
 };
+
+export const sendResetPasswordLink = async (email: string, link: string) => {
+  await transporter.sendMail({
+    to: email,
+    subject: "Reset Password",
+    html: `
+      <p>Klik link berikut untuk mereset password Anda:</p>
+      <a href="${link}">${link}</a>
+      <p>Link ini akan kedaluwarsa dalam 1 jam.</p>
+    `,
+  });
+};

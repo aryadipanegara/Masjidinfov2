@@ -8,20 +8,16 @@ export const authenticate = (
   res: Response,
   next: NextFunction
 ) => {
-  const authHeader = req.headers.authorization;
-
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return res.status(401).json({ error: "Akses ditolak. Token tidak ada." });
+  const token = req.cookies.token || req.headers.authorization?.split(" ")[1];
+  if (!token) {
+    return res.status(401).json({ error: "Token tidak ditemukan" });
   }
-
-  const token = authHeader.split(" ")[1]; // ambil setelah "Bearer"
 
   try {
     const decoded = verifyToken(token);
-    req.user = decoded;
+    (req as any).user = decoded;
     next();
   } catch (err) {
-    console.error("Auth error:", err);
-    res.status(401).json({ error: "Token tidak valid atau sudah kadaluarsa." });
+    return res.status(401).json({ error: "Token tidak valid" });
   }
 };
