@@ -1,8 +1,18 @@
 import { Router } from "express";
-import { getMe } from "../controllers/user.controller";
+import {
+  deleteUser,
+  getMe,
+  getUser,
+  getUserById,
+  updateUser,
+} from "../controllers/user.controller";
 import { authenticate } from "../middleware/auth.middleware";
+import { authorize } from "../middleware/authorize.middleware";
 
 const router = Router();
+
+router.use(authenticate);
+router.use(authorize("ADMIN", "SUPER_ADMIN"));
 
 /**
  * @swagger
@@ -40,5 +50,10 @@ const router = Router();
  *         description: Token tidak valid atau tidak ada
  */
 router.get("/me", authenticate, getMe);
+
+router.get("/", getUser);
+router.get("/:id", getUserById);
+router.put("/:id", updateUser);
+router.delete("/:id", deleteUser);
 
 export default router;
