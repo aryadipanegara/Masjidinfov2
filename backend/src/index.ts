@@ -7,6 +7,8 @@ import morgan from "morgan";
 import { ENV } from "./config/env.config";
 import authRoutes from "./routes/auth.route";
 import userRoutes from "./routes/user.routes";
+import categoryRoutes from "./routes/category.route";
+import imageRoutes from "./routes/image.route";
 import passport from "passport";
 import cookieParser from "cookie-parser";
 
@@ -69,6 +71,8 @@ app.use(passport.session());
 
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/category", categoryRoutes);
+app.use("/api/images", imageRoutes);
 
 app.get("/", (req, res) => {
   res.json({ message: "API Berjalan!" });

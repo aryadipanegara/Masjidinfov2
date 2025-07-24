@@ -51,7 +51,7 @@ import notify from "@/lib/notify";
 import handleErrorResponse from "@/utils/handleErrorResponse";
 import type { UserDetail } from "@/types/user.types";
 import UserDetailModal from "./components/user-details-modal";
-import UserEditModal from "./components/user-edit-modal";
+import UserEditModal from "./components/user-form-modal";
 
 export default function UsersPage() {
   const [users, setUsers] = useState<UserDetail[]>([]);

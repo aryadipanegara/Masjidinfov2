@@ -8,7 +8,6 @@ import {
 } from "../types/user.types";
 
 export const userService = {
-  // Untuk /me dan /users/:id
   getUserProfile: async (userId: string): Promise<UserDetail | null> => {
     return prisma.user.findUnique({
       where: { id: userId },
@@ -26,7 +25,6 @@ export const userService = {
     });
   },
 
-  // Untuk GET /users
   getUsers: async (
     page = 1,
     limit = 10,

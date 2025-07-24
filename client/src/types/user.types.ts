@@ -16,6 +16,15 @@ export type UpdateUserPayload = Partial<
   Pick<UserDetail, "fullname" | "role" | "isVerified">
 >;
 
+// Untuk payload create user
+export type CreateUserPayload = {
+  email: string;
+  fullname: string;
+  password?: string; // Password bisa opsional jika ada metode login lain (misal Google)
+  role: "SUPER_ADMIN" | "ADMIN" | "EDITOR" | "VIEWER";
+  isVerified?: boolean;
+};
+
 // Untuk response dari getUsers (daftar user + pagination)
 export type PaginatedUserResponse = {
   data: UserDetail[];
