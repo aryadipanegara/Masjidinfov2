@@ -9,8 +9,11 @@ import authRoutes from "./routes/auth.route";
 import userRoutes from "./routes/user.routes";
 import categoryRoutes from "./routes/category.route";
 import imageRoutes from "./routes/image.route";
+import postsRoutes from "./routes/posts.routes";
+import masjidRoutes from "./routes/masjid.route";
 import passport from "passport";
 import cookieParser from "cookie-parser";
+import path from "path";
 
 const app = express();
 
@@ -72,7 +75,11 @@ app.use(passport.session());
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/category", categoryRoutes);
+
 app.use("/api/images", imageRoutes);
+app.use("/images", express.static(path.join(__dirname, "../public/images")));
+app.use("/api/posts", postsRoutes);
+app.use("/api/masjid", masjidRoutes);
 
 app.get("/", (req, res) => {
   res.json({ message: "API Berjalan!" });
