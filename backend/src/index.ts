@@ -58,19 +58,9 @@ app.use(morgan("dev"));
 app.use(express.json());
 app.use(cookieParser());
 
-app.use(
-  session({
-    secret: ENV.SESSION_SECRET,
-    resave: false,
-    saveUninitialized: false,
-    cookie: { secure: false, maxAge: 1000 * 60 * 10 },
-  })
-);
-
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.use(passport.initialize());
-app.use(passport.session());
 
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);

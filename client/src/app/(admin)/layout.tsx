@@ -18,7 +18,6 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import notify from "@/lib/notify";
-import useAuth from "@/hooks/useAuth";
 
 export default function AdminLayout({
   children,
@@ -26,32 +25,10 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const { user, loading } = useAuth();
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-100 dark:bg-gray-950">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-lg text-muted-foreground">
-            Memuat dashboard admin...
-          </p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!user || (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN")) {
-    if (user) {
-      notify.error("Anda tidak memiliki akses ke halaman ini.");
-    }
-    router.push("/login");
-    return null;
-  }
 
   return (
     <SidebarProvider>
-      <AdminSidebar user={user} />
+      <AdminSidebar />
       <SidebarInset>
         <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
           <div className="flex items-center gap-2 px-4">

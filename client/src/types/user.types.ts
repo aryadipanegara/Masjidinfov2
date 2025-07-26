@@ -1,31 +1,27 @@
-// Untuk detail satu user
 export type UserDetail = {
   id: string;
   email: string;
   fullname: string;
   role: "SUPER_ADMIN" | "ADMIN" | "EDITOR" | "VIEWER";
-  avatar?: string | null;
+  avatar?: string | undefined;
   isVerified: boolean;
   hasGoogleAccount: boolean;
   createdAt: string;
   updatedAt: string;
 };
 
-// Untuk payload update user
 export type UpdateUserPayload = Partial<
   Pick<UserDetail, "fullname" | "role" | "isVerified">
 >;
 
-// Untuk payload create user
 export type CreateUserPayload = {
   email: string;
   fullname: string;
-  password?: string; // Password bisa opsional jika ada metode login lain (misal Google)
+  password?: string;
   role: "SUPER_ADMIN" | "ADMIN" | "EDITOR" | "VIEWER";
   isVerified?: boolean;
 };
 
-// Untuk response dari getUsers (daftar user + pagination)
 export type PaginatedUserResponse = {
   data: UserDetail[];
   paginations: {

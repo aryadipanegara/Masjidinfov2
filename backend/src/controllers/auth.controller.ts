@@ -1,7 +1,6 @@
 import { Request, Response } from "express";
 import { authService } from "../services/auth.service";
 import { generateToken } from "../services/jwt.service";
-import { setAuthCookie } from "../utils/cookie.util";
 
 export const register = async (req: Request, res: Response) => {
   const { email, fullname, password } = req.body;
@@ -31,7 +30,6 @@ export const verifyOTP = async (req: Request, res: Response) => {
 
 export const login = async (req: Request, res: Response) => {
   const { email, password } = req.body;
-
   try {
     if (!email || !password) {
       return res.status(400).json({ error: "Email dan password wajib diisi" });
@@ -42,8 +40,6 @@ export const login = async (req: Request, res: Response) => {
       password
     );
 
-    setAuthCookie(res, token);
-
     if (requiresGoogle) {
       return res.json({
         message: "Login berhasil, tapi Anda belum connect ke Google",
@@ -52,9 +48,13 @@ export const login = async (req: Request, res: Response) => {
       });
     }
 
-    res.json({ message: "Login berhasil" });
+    return res.json({
+      message: "Login berhasil",
+      requiresGoogle: false,
+      token,
+    });
   } catch (err: any) {
-    res.status(401).json({ error: err.message });
+    return res.status(401).json({ error: err.message });
   }
 };
 
@@ -126,7 +126,7 @@ export const refreshToken = async (
 };
 
 export const logout = async (req: Request, res: Response): Promise<void> => {
-  const sessionToken = req.cookies["refresh_token"];
+  const sessionToken = req.cookies["token"];
   if (!sessionToken) {
     res.status(400).json({ error: "Tidak ada sesi yang ditemukan." });
     return;
@@ -135,7 +135,7 @@ export const logout = async (req: Request, res: Response): Promise<void> => {
   try {
     await authService.revokeSession(sessionToken);
 
-    res.clearCookie("refresh_token", {
+    res.clearCookie("token", {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",

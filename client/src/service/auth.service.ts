@@ -1,6 +1,7 @@
 import AxiosInstance from "@/lib/axios";
 
 export const AuthService = {
+  // Login with email & password
   login: (data: { email: string; password: string }) =>
     AxiosInstance.post("/auth/login", data),
 
@@ -20,6 +21,7 @@ export const AuthService = {
 
   logout: () => AxiosInstance.post("/auth/logout"),
 
+  // Login with Google
   getGoogleLoginUrl: () => {
     return `${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/google`;
   },

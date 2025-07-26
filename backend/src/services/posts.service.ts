@@ -1,6 +1,10 @@
 import { prisma } from "../config/prisma.config";
 import { Prisma, PostType } from "@prisma/client";
 import { CreatePostPayload } from "../types/posts.types";
+import {
+  extractImagesFromContent,
+  removeDuplicateImages,
+} from "../utils/imageExtractor.utils";
 
 export const postService = {
   getPosts: async (
@@ -151,6 +155,14 @@ export const postService = {
       imageIds,
     } = data;
 
+    const extractedImages = extractImagesFromContent(content);
+
+    let allImageConnections: { id: string }[] = [];
+
+    if (imageIds && imageIds.length > 0) {
+      allImageConnections = imageIds.map((imageId) => ({ id: imageId }));
+    }
+
     return prisma.post.create({
       data: {
         title,
@@ -166,11 +178,20 @@ export const postService = {
               create: categoryIds.map((categoryId) => ({ categoryId })),
             }
           : undefined,
-        images: imageIds
-          ? {
-              connect: imageIds.map((imageId) => ({ id: imageId })),
-            }
-          : undefined,
+        // Modifikasi bagian images untuk menangani ekstraksi otomatis
+        images: {
+          // Connect images yang sudah ada
+          ...(allImageConnections.length > 0 && {
+            connect: allImageConnections,
+          }),
+          // Create images yang diekstrak dari content (jika belum ada di database)
+          create: extractedImages.map((img, index) => ({
+            url: img.url,
+            altText: img.altText || null,
+            caption: img.caption || null,
+            order: index,
+          })),
+        },
       },
     });
   },
@@ -191,7 +212,13 @@ export const postService = {
     const post = await prisma.post.findUnique({ where: { slug } });
     if (!post) throw new Error("Post tidak ditemukan");
 
-    await prisma.postCategory.deleteMany({ where: { postId: post.id } });
+    const extractedImages = content ? extractImagesFromContent(content) : [];
+
+    let allImageConnections: { id: string }[] = [];
+
+    if (imageIds && imageIds.length > 0) {
+      allImageConnections = imageIds.map((imageId) => ({ id: imageId }));
+    }
 
     return prisma.post.update({
       where: { slug },
@@ -205,14 +232,23 @@ export const postService = {
         coverImage,
         categories: categoryIds
           ? {
+              deleteMany: {},
               create: categoryIds.map((categoryId) => ({ categoryId })),
             }
           : undefined,
-        images: imageIds
-          ? {
-              connect: imageIds.map((imageId) => ({ id: imageId })),
-            }
-          : undefined,
+        images: {
+          deleteMany: {},
+          ...(allImageConnections.length > 0 && {
+            connect: allImageConnections,
+          }),
+          // Create images yang diekstrak dari content
+          create: extractedImages.map((img, index) => ({
+            url: img.url,
+            altText: img.altText || null,
+            caption: img.caption || null,
+            order: index,
+          })),
+        },
       },
     });
   },
@@ -230,7 +266,16 @@ export const postService = {
       imageIds,
     } = data;
 
-    await prisma.postCategory.deleteMany({ where: { postId: id } });
+    const existingPost = await prisma.post.findUnique({ where: { id } });
+    if (!existingPost) throw new Error("Post tidak ditemukan");
+
+    const extractedImages = content ? extractImagesFromContent(content) : [];
+
+    let allImageConnections: { id: string }[] = [];
+
+    if (imageIds && imageIds.length > 0) {
+      allImageConnections = imageIds.map((imageId) => ({ id: imageId }));
+    }
 
     return prisma.post.update({
       where: { id },
@@ -244,14 +289,25 @@ export const postService = {
         coverImage,
         categories: categoryIds
           ? {
+              deleteMany: {},
               create: categoryIds.map((categoryId) => ({ categoryId })),
             }
           : undefined,
-        images: imageIds
-          ? {
-              connect: imageIds.map((imageId) => ({ id: imageId })),
-            }
-          : undefined,
+        images: {
+          // Hapus semua koneksi gambar lama
+          deleteMany: {},
+          // Connect images yang sudah ada (manual)
+          ...(allImageConnections.length > 0 && {
+            connect: allImageConnections,
+          }),
+          // Create images yang diekstrak dari content
+          create: extractedImages.map((img, index) => ({
+            url: img.url,
+            altText: img.altText || null,
+            caption: img.caption || null,
+            order: index,
+          })),
+        },
       },
     });
   },

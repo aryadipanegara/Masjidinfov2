@@ -46,28 +46,55 @@ export const getPostBySlug = async (req: Request, res: Response) => {
 };
 
 export const createPost = async (req: Request, res: Response) => {
-  const authorId = (req as any).user?.userId;
-  const post = await postService.createPost(req.body, authorId);
-  res.status(201).json(post);
+  try {
+    const authorId = (req as any).user?.userId;
+
+    if (!authorId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    const post = await postService.createPost(req.body, authorId);
+    res.status(201).json(post);
+  } catch (error: any) {
+    console.error("Error creating post:", error);
+    res.status(500).json({ error: error.message || "Failed to create post" });
+  }
 };
 
 export const updatePostBySlug = async (req: Request, res: Response) => {
-  const { slug } = req.params;
-  const data = req.body;
-
   try {
+    const { slug } = req.params;
+    const data = req.body;
+
     const updated = await postService.updatePostBySlug(slug, data);
     res.json(updated);
   } catch (error: any) {
     console.error("Error updating post by slug:", error);
-    res.status(404).json({ error: error.message || "Post tidak ditemukan" });
+
+    if (error.message === "Post tidak ditemukan") {
+      return res.status(404).json({ error: error.message });
+    }
+
+    res.status(500).json({ error: error.message || "Failed to update post" });
   }
 };
 
 export const updatePost = async (req: Request, res: Response) => {
-  const { id } = req.params;
-  const post = await postService.updatePost(id, req.body);
-  res.json(post);
+  try {
+    const { id } = req.params;
+    const data = req.body;
+
+    const updated = await postService.updatePost(id, data);
+    res.json(updated);
+  } catch (error: any) {
+    console.error("Error updating post:", error);
+
+    if (error.message === "Post tidak ditemukan") {
+      return res.status(404).json({ error: error.message });
+    }
+
+    res.status(500).json({ error: error.message || "Failed to update post" });
+  }
 };
 
 export const deletePost = async (req: Request, res: Response) => {

@@ -1,28 +1,31 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { UserService } from "@/service/users.service";
-import { UserDetail } from "@/types/user.types";
+import { useState, useEffect } from "react";
+import { getCurrentUser, isAuthenticated, removeAuthToken } from "@/utils/auth";
+
+export interface User {
+  id: string;
+  email: string;
+  role: string;
+}
 
 export default function useAuth() {
-  const [user, setUser] = useState<UserDetail | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
 
   useEffect(() => {
-    UserService.getMe()
-      .then((res) => {
-        setUser(res.data);
-      })
-      .catch(() => {
-        setUser(null);
-        router.push("login");
-      })
-      .finally(() => {
-        setLoading(false);
-      });
-  }, [router]);
+    if (isAuthenticated()) {
+      setUser(getCurrentUser());
+    } else {
+      setUser(null);
+    }
+    setLoading(false);
+  }, []);
 
-  return { user, loading };
+  const logout = () => {
+    removeAuthToken();
+    setUser(null);
+  };
+
+  return { user, loading, logout };
 }

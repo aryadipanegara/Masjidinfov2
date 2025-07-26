@@ -1,8 +1,6 @@
 "use client";
 
-import type React from "react";
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -20,14 +18,16 @@ import { ChromeIcon, EyeIcon, EyeOffIcon } from "lucide-react";
 import notify from "@/lib/notify";
 import handleErrorResponse from "@/utils/handleErrorResponse";
 import { AuthService } from "@/service/auth.service";
+import { setTokenCookie } from "@/utils/cookie.util";
 
 export default function LoginPage() {
+  const router = useRouter();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
-  const router = useRouter();
+  const [submitting, setSubmitting] = useState(false);
 
   const validatePassword = (pwd: string) => {
     if (pwd.length < 8) {
@@ -40,38 +40,27 @@ export default function LoginPage() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validatePassword(password)) return;
 
-    if (!validatePassword(password)) {
-      return;
-    }
-
-    setLoading(true);
-    const loadingToastId = notify.loading("Sedang login...");
-
+    setSubmitting(true);
+    const toastId = notify.loading("Sedang login...");
     try {
       const res = await AuthService.login({ email, password });
-      const data = res.data; // Data dari respons Axios
+      const { token } = res.data;
 
-      notify.dismiss(loadingToastId);
-      notify.success("Login berhasil!");
-
-      if (data.requiresGoogle) {
-        notify.error(
-          data.message || "Login berhasil, tapi Anda belum connect ke Google"
-        );
-      } else {
-        router.push("/dashboard");
-      }
-    } catch (err: unknown) {
-      handleErrorResponse(err, loadingToastId);
+      setTokenCookie(token);
+      router.push("/");
+      notify.dismiss(toastId);
+    } catch (err) {
+      handleErrorResponse(err, toastId);
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
   const handleGoogleLogin = () => {
-    notify.loading("Mengarahkan ke Google...");
-    window.location.href = AuthService.getGoogleLoginUrl(); // Gunakan AuthService
+    const googleUrl = AuthService.getGoogleLoginUrl();
+    window.location.href = googleUrl;
   };
 
   return (
@@ -142,8 +131,9 @@ export default function LoginPage() {
                 <p className="text-red-500 text-sm mt-1">{passwordError}</p>
               )}
             </div>
-            <Button type="submit" className="w-full h-10" disabled={loading}>
-              {loading ? "Memuat..." : "Login"}
+
+            <Button disabled={submitting} type="submit" className="w-full h-10">
+              {submitting ? "Loading..." : "Masuk"}
             </Button>
           </form>
           <div className="relative">

@@ -9,7 +9,6 @@ const AxiosInstance = axios.create({
   },
 });
 
-// ✅ Interceptor untuk menambahkan token ke header Authorization
 AxiosInstance.interceptors.request.use(
   (config) => {
     const token = Cookies.get("token");

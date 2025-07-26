@@ -225,16 +225,9 @@ router.get(
   (req, res) => {
     const { token, connected } = req.user as any;
 
-    res.cookie("token", token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production", // true di production
-      sameSite: "lax", // atau "none" jika beda domain dan pakai HTTPS
-      maxAge: 24 * 60 * 60 * 1000, // 1 hari
-    });
-
     const redirectUrl = connected
-      ? `${process.env.CLIENT_URL}/settings?connected=true`
-      : `${process.env.CLIENT_URL}/`;
+      ? `${process.env.CLIENT_URL}/settings?connected=true&token=${token}`
+      : `${process.env.CLIENT_URL}/auth/callback?token=${token}`;
 
     res.redirect(redirectUrl);
   }

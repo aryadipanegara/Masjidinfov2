@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -27,9 +27,7 @@ import {
 } from "lucide-react";
 import notify from "@/lib/notify";
 import handleErrorResponse from "@/utils/handleErrorResponse";
-import Cookies from "js-cookie";
-import useAuth from "@/hooks/useAuth";
-import { AuthService } from "@/service/auth.service";
+import { useAuth } from "@/app/providers";
 
 const navigation = [
   { name: "Beranda", href: "/", icon: HomeIcon },
@@ -37,31 +35,41 @@ const navigation = [
   { name: "Masjid", href: "/masjid", icon: MapPinIcon },
 ];
 
+interface User {
+  id: string;
+  email: string;
+  role: string;
+  fullname: string;
+  avatar?: string;
+}
+
 export function MainNavbar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, loading } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  // Don't show navbar on admin pages
+  const { user, loading, logout } = useAuth();
+
+  // Kalau masih load atau di route admin, jangan render apa‑apa
+  if (loading) return null;
   if (pathname.startsWith("/dashboard") || pathname.startsWith("/(admin)")) {
     return null;
   }
 
+  // Cek permission dari user.role
   const canCreateEdit =
     user && ["EDITOR", "ADMIN", "SUPER_ADMIN"].includes(user.role);
   const isAdmin = user && ["ADMIN", "SUPER_ADMIN"].includes(user.role);
 
   const handleLogout = async () => {
-    const loadingToastId = notify.loading("Logging out...");
+    const toastId = notify.loading("Logging out...");
     try {
-      await AuthService.logout();
-      notify.dismiss(loadingToastId);
+      await logout(); // otomatis remove token & clear user
+      notify.dismiss(toastId);
       notify.success("Logout berhasil!");
-      Cookies.remove("authToken");
       router.push("/");
     } catch (err: unknown) {
-      handleErrorResponse(err, loadingToastId);
+      handleErrorResponse(err, toastId);
     }
   };
 

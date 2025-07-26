@@ -8,4 +8,5 @@ export type CreatePostPayload = {
   tags?: string[];
   categoryIds?: string[];
   imageIds?: string[];
+  allImageConnections?: string[] | undefined;
 };

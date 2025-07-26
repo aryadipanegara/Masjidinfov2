@@ -1,6 +1,6 @@
 "use client";
 
-import type React from "react";
+import React from "react";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -29,7 +29,6 @@ import {
   ImageIcon,
   XIcon,
 } from "lucide-react";
-import { TipTapEditor } from "@/components/tiptap-editor";
 import { EditModeToggle } from "@/components/edit-mode-toggle";
 import { MasjidInfoCard } from "@/components/masjid-info-card";
 import { RelatedPosts } from "@/components/related-posts";
@@ -47,6 +46,7 @@ import { PostService } from "@/service/posts.service";
 import { ImageService } from "@/service/image.service";
 import { fixImageUrlsInHtml } from "@/utils/imageUrlHelper";
 import useSWR from "swr";
+import { TipTapEditor } from "@/components/tiptap-editor";
 
 interface PostDetailPageProps {
   params: {
@@ -63,7 +63,7 @@ const fetcher = async (url: string) => {
 };
 
 export default function PostDetailPage({ params }: PostDetailPageProps) {
-  const { slug } = params;
+  const { slug } = React.use(params);
   const router = useRouter();
   const { user } = useAuth();
 
