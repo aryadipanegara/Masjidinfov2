@@ -22,11 +22,10 @@ interface User {
  */
 export function setAuthToken(token: string): void {
   Cookies.set("token", token, {
-    httpOnly: false,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
+    expires: 1,
     path: "/",
-    maxAge: 1000 * 60 * 60 * 24 * 7,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "Lax",
   });
 }
 

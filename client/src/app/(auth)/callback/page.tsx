@@ -13,7 +13,7 @@ export default function GoogleCallbackPage() {
 
     if (token) {
       setTokenCookie(token);
-      router.push("/dashboard");
+      router.push("/");
     } else {
       router.push("/login?error=missing_token");
     }

@@ -12,7 +12,7 @@ import { authorize } from "../middleware/authorize.middleware";
 const router = Router();
 
 router.use(authenticate);
-router.use(authorize("ADMIN", "SUPER_ADMIN"));
+// router.use(authorize("ADMIN", "SUPER_ADMIN"));
 
 /**
  * @swagger

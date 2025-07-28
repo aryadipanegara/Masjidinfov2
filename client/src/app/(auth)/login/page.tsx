@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -18,10 +18,11 @@ import { ChromeIcon, EyeIcon, EyeOffIcon } from "lucide-react";
 import notify from "@/lib/notify";
 import handleErrorResponse from "@/utils/handleErrorResponse";
 import { AuthService } from "@/service/auth.service";
-import { setTokenCookie } from "@/utils/cookie.util";
+import { useAuth } from "@/app/providers";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { login } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -48,7 +49,7 @@ export default function LoginPage() {
       const res = await AuthService.login({ email, password });
       const { token } = res.data;
 
-      setTokenCookie(token);
+      await login(token);
       router.push("/");
       notify.dismiss(toastId);
     } catch (err) {

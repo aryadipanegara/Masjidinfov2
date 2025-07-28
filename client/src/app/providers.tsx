@@ -23,6 +23,7 @@ interface UserProfile {
   fullname: string;
   avatar?: string;
 }
+
 interface AuthContextValue {
   user: UserProfile | null;
   loading: boolean;
@@ -64,6 +65,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (newToken: string) => {
     setAuthToken(newToken);
     setToken(newToken);
+
+    try {
+      const res = await UserService.getMe();
+      setUser(res.data);
+    } catch {
+      const basic = getCurrentUser()!;
+      setUser({ ...basic, fullname: basic.email });
+    }
   };
 
   const logout = () => {

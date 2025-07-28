@@ -227,7 +227,7 @@ router.get(
 
     const redirectUrl = connected
       ? `${process.env.CLIENT_URL}/settings?connected=true&token=${token}`
-      : `${process.env.CLIENT_URL}/auth/callback?token=${token}`;
+      : `${process.env.CLIENT_URL}/callback?token=${token}`;
 
     res.redirect(redirectUrl);
   }
