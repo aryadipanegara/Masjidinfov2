@@ -133,7 +133,7 @@ export function HeroBanner() {
   const backendBaseUrl = process.env.NEXT_PUBLIC_BACKEND_BASE_URL || "";
 
   return (
-    <section className="py-8 bg-background">
+    <section className="py-8">
       <div className="container mx-auto px-4">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Featured Post Slider */}

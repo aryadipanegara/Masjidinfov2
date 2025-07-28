@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PostService } from "@/service/posts.service";
-import { StarIcon, MapPinIcon, BookOpenIcon } from "lucide-react";
+import { MapPinIcon, BookOpenIcon } from "lucide-react";
 import useSWR from "swr";
 import type { Post } from "@/types/posts.types";
 
@@ -24,7 +24,7 @@ export function PopularSection() {
     `/posts/popular?type=${activeTab}`,
     async () => {
       const params = activeTab === "all" ? {} : { type: activeTab };
-      const response = await PostService.getAll({ ...params, limit: 12 });
+      const response = await PostService.getAll({ ...params, limit: 8 });
       return response.data.data;
     }
   );
@@ -42,12 +42,8 @@ export function PopularSection() {
   const backendBaseUrl = process.env.NEXT_PUBLIC_BACKEND_BASE_URL || "";
 
   return (
-    <section className="py-12 bg-background">
+    <section>
       <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between mb-8">
-          <h2 className="text-2xl lg:text-3xl font-bold">Populer</h2>
-        </div>
-
         {/* Tabs */}
         <div className="flex space-x-2 mb-6">
           {tabs.map((tab) => (
@@ -64,7 +60,7 @@ export function PopularSection() {
         </div>
 
         {/* Posts Grid */}
-        <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 overflow-x-auto">
+        <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-8 gap-4 overflow-x-auto">
           {isLoading
             ? [...Array(12)].map((_, i) => (
                 <div key={i} className="flex-none animate-pulse">

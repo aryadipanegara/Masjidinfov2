@@ -15,8 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Masjid Info",
-  description: "Masjid Info - Aplikasi Masjid",
+  title: "Masjidinfo",
+  description: "Masjidinfo - Aplikasi Masjid",
 };
 
 export default function RootLayout({

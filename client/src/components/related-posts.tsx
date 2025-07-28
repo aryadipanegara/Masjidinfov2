@@ -75,6 +75,8 @@ export function RelatedPosts({ currentPost }: RelatedPostsProps) {
     return null;
   }
 
+  const backendBaseUrl = process.env.NEXT_PUBLIC_BACKEND_BASE_URL || "";
+
   return (
     <Card className="mt-12">
       <CardHeader>
@@ -93,7 +95,7 @@ export function RelatedPosts({ currentPost }: RelatedPostsProps) {
                   {post.coverImage && (
                     <div className="aspect-video overflow-hidden rounded-lg mb-3">
                       <img
-                        src={post.coverImage || "/placeholder.svg"}
+                        src={`${backendBaseUrl}${post.coverImage}`}
                         alt={post.title}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                       />

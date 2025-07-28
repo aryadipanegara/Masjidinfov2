@@ -1,5 +1,4 @@
 "use client";
-
 import React from "react";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -28,7 +27,6 @@ import {
   BookOpenIcon,
   ImageIcon,
   XIcon,
-  HomeIcon,
   StarIcon,
   EyeIcon,
   HeartIcon,
@@ -36,6 +34,9 @@ import {
 import { EditModeToggle } from "@/components/edit-mode-toggle";
 import { MasjidInfoCard } from "@/components/masjid-info-card";
 import { RelatedPosts } from "@/components/related-posts";
+import { TopCenterNavigation } from "@/components/reader/top-center-navigation";
+import { BottomCenterNavigation } from "@/components/reader/bottom-center-navigation";
+import { BottomRightController } from "@/components/reader/bottom-right-controller";
 import notify from "@/lib/notify";
 import handleErrorResponse from "@/utils/handleErrorResponse";
 import type {
@@ -50,6 +51,7 @@ import { fixImageUrlsInHtml } from "@/utils/imageUrlHelper";
 import useSWR from "swr";
 import { TipTapEditor } from "@/components/tiptap-editor";
 import { useAuth } from "@/app/providers";
+import { useReaderControls } from "@/hooks/use-reader-controls";
 
 interface PostDetailPageProps {
   params: {
@@ -68,6 +70,7 @@ export default function PostDetailPage({ params }: PostDetailPageProps) {
   const { slug } = React.use(params);
   const router = useRouter();
   const { user } = useAuth();
+  const { showControls } = useReaderControls();
 
   const {
     data: post,
@@ -97,6 +100,7 @@ export default function PostDetailPage({ params }: PostDetailPageProps) {
   const [viewCount, setViewCount] = useState(0);
   const [rating, setRating] = useState(0);
   const [likeCount, setLikeCount] = useState(0);
+  const [relatedPosts, setRelatedPosts] = useState([]);
 
   const canEdit =
     user && ["EDITOR", "ADMIN", "SUPER_ADMIN"].includes(user.role);
@@ -110,7 +114,6 @@ export default function PostDetailPage({ params }: PostDetailPageProps) {
         coverImage: post.coverImage,
         tags: post.tags,
       });
-
       setBookmarkCount(Math.floor(Math.random() * 1000) + 100);
       setViewCount(Math.floor(Math.random() * 10000) + 1000);
       setRating(4.2 + Math.random() * 0.8);
@@ -254,25 +257,24 @@ export default function PostDetailPage({ params }: PostDetailPageProps) {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen">
-        {/* Top Navigation */}
-        <div className="sticky top-0 z-50 bg-background/95 backdrop-blur border-b">
-          <div className="flex items-center justify-between p-4">
-            <div className="w-10 h-10 rounded-full animate-pulse" />
-            <div className="w-10 h-10 rounded-full animate-pulse" />
-          </div>
-        </div>
+      <div className="min-h-screen bg-white">
+        <TopCenterNavigation
+          title="Loading..."
+          subtitle="Memuat konten"
+          onBack={() => router.back()}
+          showControls={showControls}
+        />
 
-        <div className="container mx-auto px-4 py-8 max-w-6xl">
+        <div className="pt-20 container mx-auto px-4 py-8 max-w-6xl">
           <div className="animate-pulse space-y-8">
             <div className="flex gap-8">
-              <div className="w-64 h-80 rounded-lg" />
+              <div className="w-64 h-80 bg-gray-200 rounded-lg" />
               <div className="flex-1 space-y-4">
-                <div className="h-12 rounded w-3/4" />
-                <div className="h-6 rounded w-1/2" />
+                <div className="h-12 bg-gray-200 rounded w-3/4" />
+                <div className="h-6 bg-gray-200 rounded w-1/2" />
                 <div className="flex gap-4">
-                  <div className="h-10 rounded w-24" />
-                  <div className="h-10 rounded w-24" />
+                  <div className="h-10 bg-gray-200 rounded w-24" />
+                  <div className="h-10 bg-gray-200 rounded w-24" />
                 </div>
               </div>
             </div>
@@ -284,22 +286,15 @@ export default function PostDetailPage({ params }: PostDetailPageProps) {
 
   if (error || !post) {
     return (
-      <div className="min-h-screen bg-background">
-        {/* Top Navigation */}
-        <div className="sticky top-0 z-50 bg-background/95 backdrop-blur border-b">
-          <div className="flex items-center justify-between p-4">
-            <Button variant="ghost" size="sm" onClick={() => router.back()}>
-              <ArrowLeftIcon className="h-5 w-5" />
-            </Button>
-            <Button variant="ghost" size="sm" asChild>
-              <Link href="/">
-                <HomeIcon className="h-5 w-5" />
-              </Link>
-            </Button>
-          </div>
-        </div>
+      <div className="min-h-screen bg-white">
+        <TopCenterNavigation
+          title="Post Tidak Ditemukan"
+          subtitle="Error"
+          onBack={() => router.back()}
+          showControls={showControls}
+        />
 
-        <div className="container mx-auto px-4 py-8 max-w-4xl text-center">
+        <div className="pt-20 container mx-auto px-4 py-8 max-w-4xl text-center">
           <h1 className="text-2xl font-bold mb-4">Post Tidak Ditemukan</h1>
           <p className="text-muted-foreground mb-8">
             Post yang Anda cari tidak dapat ditemukan.
@@ -319,37 +314,29 @@ export default function PostDetailPage({ params }: PostDetailPageProps) {
   const backendBaseUrl = process.env.NEXT_PUBLIC_BACKEND_BASE_URL || "";
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Top Navigation - Fixed */}
-      <div className="sticky top-0 z-50 bg-background/95 backdrop-blur">
-        <div className="flex items-center justify-between p-6">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => router.back()}
-            className="rounded-full bg-background/80 hover:bg-background shadow-md border"
-          >
-            <ArrowLeftIcon className="h-5 w-5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            asChild
-            className="rounded-full bg-background/80 hover:bg-background shadow-md border"
-          >
-            <Link href="/">
-              <HomeIcon className="h-5 w-5" />
-            </Link>
-          </Button>
-        </div>
-      </div>
+    <div className="min-h-screen bg-white">
+      {/* Reader Controls */}
+      <TopCenterNavigation
+        title={post?.title || "Loading..."}
+        subtitle={post?.type === "masjid" ? "Masjid" : "Artikel"}
+        onBack={() => router.back()}
+        showControls={showControls}
+      />
 
-      <div className="container mx-auto px-4 py-8 max-w-6xl">
+      <BottomCenterNavigation
+        onBack={() => router.back()}
+        showControls={showControls}
+        relatedPosts={relatedPosts}
+      />
+
+      <BottomRightController showControls={showControls} />
+
+      <div className="pt-20 container mx-auto px-4 py-8 max-w-6xl">
         <article className="space-y-8">
           {/* Hero Section */}
           <div className="flex flex-col lg:flex-row gap-8">
             {/* Cover Image */}
-            <div className="lg:w-80 flex-shrink-0">
+            <div className="lg:w-80 flex-shrink-0 relative">
               {isEditMode ? (
                 <div className="space-y-4">
                   <Label>Cover Image</Label>
@@ -430,7 +417,7 @@ export default function PostDetailPage({ params }: PostDetailPageProps) {
                   />
                 </div>
               ) : (
-                <h1 className="text-3xl lg:text-4xl font-bold leading-tight text-white">
+                <h1 className="text-3xl lg:text-4xl font-bold leading-tight">
                   {post?.title || "Memuat judul..."}
                 </h1>
               )}
