@@ -23,12 +23,27 @@ export const createComment = async (req: Request, res: Response) => {
 };
 
 export const getCommentsByPost = async (req: Request, res: Response) => {
-  const { postId } = req.params;
-  const page = parseInt(req.query.page as string) || 1;
-  const limit = parseInt(req.query.limit as string) || 10;
+  try {
+    const { postId } = req.params;
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 10;
 
-  const result = await commentService.getCommentsByPost(postId, page, limit);
-  res.json(result);
+    const userId = (req as any).user?.userId;
+
+    const result = await commentService.getCommentsByPost(
+      postId,
+      userId,
+      page,
+      limit
+    );
+
+    res.json(result);
+  } catch (error: any) {
+    console.error("Error fetching comments:", error);
+    res
+      .status(500)
+      .json({ error: error.message || "Failed to fetch comments" });
+  }
 };
 
 export const updateComment = async (req: Request, res: Response) => {
@@ -60,5 +75,51 @@ export const deleteComment = async (req: Request, res: Response) => {
     res.status(204).end();
   } catch (err: any) {
     res.status(403).json({ error: err.message || "Tidak diizinkan" });
+  }
+};
+
+// 👍 Like a comment
+export const likeComment = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.userId;
+    const { commentId } = req.params;
+
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+    await commentService.likeComment(commentId, userId);
+    const totalLikes = await commentService.getCommentLikeCount(commentId);
+
+    res.json({
+      success: true,
+      liked: true,
+      totalLikes,
+    });
+  } catch (error: any) {
+    console.error("Error liking comment:", error);
+    res.status(500).json({ error: error.message || "Failed to like comment" });
+  }
+};
+
+// 👎 Unlike a comment
+export const unlikeComment = async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.userId;
+    const { commentId } = req.params;
+
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+    await commentService.unlikeComment(commentId, userId);
+    const totalLikes = await commentService.getCommentLikeCount(commentId);
+
+    res.json({
+      success: true,
+      liked: false,
+      totalLikes,
+    });
+  } catch (error: any) {
+    console.error("Error unliking comment:", error);
+    res
+      .status(500)
+      .json({ error: error.message || "Failed to unlike comment" });
   }
 };

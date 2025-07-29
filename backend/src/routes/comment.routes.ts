@@ -4,6 +4,8 @@ import {
   createComment,
   deleteComment,
   getCommentsByPost,
+  likeComment,
+  unlikeComment,
   updateComment,
 } from "../controllers/comment.contoller";
 
@@ -75,6 +77,10 @@ router.get("/:postId/comments", getCommentsByPost);
  *           - parentId
  */
 router.post("/:postId/comments", authenticate, createComment);
+
+router.post("/:commentId/like", authenticate, likeComment);
+
+router.delete("/:commentId/like", authenticate, unlikeComment);
 
 router.patch("/:commentId", authenticate, updateComment);
 router.delete("/:commentId", authenticate, deleteComment);

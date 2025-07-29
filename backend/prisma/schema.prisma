@@ -60,10 +60,11 @@ model User {
   sessions         Session[]        @relation("userPrismaSessions")
   userSessions     UserSession[]    @relation("userSessions")
 
-  bookmarks Bookmark[]
-  histories History[]
-  readlists ReadList[]
-  comments  Comment[]               @relation("UserComments")
+  bookmarks    Bookmark[]
+  histories    History[]
+  readlists    ReadList[]
+  comments     Comment[]               @relation("UserComments")
+  commentLikes CommentLike[]        @relation("UserCommentLikes")
 
   @@index([email])
   @@index([hasGoogleAccount])
@@ -267,21 +268,36 @@ model ReadListItem {
 }
 
 model Comment {
-  id        String    @id @default(ulid())
-  content   String    @db.Text
-  postId    String    @map("post_id")
-  authorId  String    @map("author_id")
-  parentId  String?   @map("parent_id")
-  createdAt DateTime  @default(now()) @map("created_at")
+  id        String        @id @default(ulid())
+  content   String        @db.Text
+  postId    String        @map("post_id")
+  authorId  String        @map("author_id")
+  parentId  String?       @map("parent_id")
+  createdAt DateTime      @default(now()) @map("created_at")
 
-  post      Post      @relation("PostComments", fields: [postId], references: [id], onDelete: Cascade)
-  author    User      @relation("UserComments", fields: [authorId], references: [id], onDelete: Cascade)
-  parent    Comment?  @relation("CommentParent", fields: [parentId], references: [id], onDelete: Cascade)
-  replies   Comment[] @relation("CommentParent")
+  post      Post          @relation("PostComments", fields: [postId], references: [id], onDelete: Cascade)
+  author    User          @relation("UserComments", fields: [authorId], references: [id], onDelete: Cascade)
+  parent    Comment?      @relation("CommentParent", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   Comment[]     @relation("CommentParent")
+  likes     CommentLike[]
 
   @@index([postId])
   @@map("comment")
 }
+
+model CommentLike {
+  id        String   @id @default(ulid())
+  commentId String   @map("comment_id")
+  userId    String   @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  comment   Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user      User     @relation("UserCommentLikes", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, userId])
+  @@map("comment_like")
+}
+
 
 model Announcement {
   id        String   @id @default(ulid())
