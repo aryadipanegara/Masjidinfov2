@@ -10,7 +10,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
-  StarIcon,
   MapPinIcon,
   BookOpenIcon,
   CalendarIcon,
@@ -18,33 +17,8 @@ import {
 } from "lucide-react";
 import useSWR from "swr";
 import { PostService } from "@/service/posts.service";
-
-const mockAnnouncements = [
-  {
-    id: "1",
-    title: "Perubahan Sistem Pembelian Premium dan Pembelian dari Luar Negeri.",
-    date: "17 April 2025",
-    avatar: "/placeholder.svg?height=40&width=40&text=A1",
-  },
-  {
-    id: "2",
-    title: "GANTI DOMAIN - Mohon Login Ulang",
-    date: "16 March 2025",
-    avatar: "/placeholder.svg?height=40&width=40&text=A2",
-  },
-  {
-    id: "3",
-    title: "Update Fitur Pencarian dan Filter Baru",
-    date: "15 March 2025",
-    avatar: "/placeholder.svg?height=40&width=40&text=A3",
-  },
-  {
-    id: "4",
-    title: "Maintenance Server Terjadwal",
-    date: "14 March 2025",
-    avatar: "/placeholder.svg?height=40&width=40&text=A4",
-  },
-];
+import { AnnouncementService } from "@/service/announcement.service";
+import Image from "next/image";
 
 export function HeroBanner() {
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -67,6 +41,13 @@ export function HeroBanner() {
 
     return () => clearInterval(interval);
   }, [featuredPosts]);
+
+  const { data: announcementsResponse } = useSWR("/announcement", async () => {
+    const response = await AnnouncementService.getAll({ limit: 4 });
+    return response.data;
+  });
+
+  const announcements = announcementsResponse?.data || [];
 
   const nextSlide = () => {
     if (featuredPosts) {
@@ -138,7 +119,7 @@ export function HeroBanner() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Featured Post Slider */}
           <div className="lg:col-span-2 relative">
-            <Card className="overflow-hidden h-full">
+            <Card className="overflow-hidden h-full p-0">
               <div className="relative aspect-[2/1] overflow-hidden">
                 <AnimatePresence mode="wait">
                   {currentPost && (
@@ -150,16 +131,20 @@ export function HeroBanner() {
                       transition={{ duration: 0.5 }}
                       className="absolute inset-0"
                     >
-                      <img
+                      <Image
                         src={
                           currentPost.coverImage
                             ? `${backendBaseUrl}${currentPost.coverImage}`
-                            : "/placeholder.svg?height=400&width=800"
+                            : "/placeholder.svg"
                         }
                         alt={currentPost.title}
-                        className="w-full h-full object-cover"
+                        fill
+                        sizes="100vw"
+                        className="object-cover"
+                        placeholder="blur"
+                        blurDataURL="/placeholder.svg"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/30 to-transparent" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent pointer-events-none" />
 
                       {/* Content Overlay */}
                       <div className="absolute inset-0 flex flex-col justify-end p-6 lg:p-8 text-white">
@@ -285,7 +270,7 @@ export function HeroBanner() {
 
             <Card>
               <CardContent className="p-4 space-y-4">
-                {mockAnnouncements.map((announcement, index) => (
+                {announcements.map((announcement: any, index: number) => (
                   <motion.div
                     key={announcement.id}
                     initial={{ opacity: 0, x: 20 }}
@@ -304,10 +289,10 @@ export function HeroBanner() {
                     </Avatar>
                     <div className="flex-1 min-w-0">
                       <h4 className="text-sm font-medium line-clamp-2 mb-1">
-                        {announcement.title}
+                        {announcement.message}
                       </h4>
                       <p className="text-xs text-muted-foreground">
-                        {announcement.date}
+                        {formatDate(announcement.createdAt)}
                       </p>
                     </div>
                   </motion.div>

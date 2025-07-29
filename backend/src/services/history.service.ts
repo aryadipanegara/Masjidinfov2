@@ -35,44 +35,40 @@ export const historyService = {
             }
           : {},
         type ? { type: { equals: type } } : {},
-        categoryId
-          ? {
-              categories: {
-                some: { categoryId },
-              },
-            }
-          : {},
+        categoryId ? { categories: { some: { categoryId } } } : {},
       ],
     };
 
-    const [totalItems, histories] = await Promise.all([
-      prisma.history.count({
-        where: { userId, post: wherePost },
-      }),
-      prisma.history.findMany({
-        where: { userId, post: wherePost },
-        skip,
-        take: limit,
-        orderBy: { viewedAt: "desc" },
-        include: {
-          post: {
-            include: {
-              categories: { include: { category: true } },
-              images: true,
-              author: {
-                select: {
-                  id: true,
-                  fullname: true,
-                  email: true,
-                  avatar: true,
-                },
+    const grouped = await prisma.history.groupBy({
+      by: ["postId"],
+      where: { userId, post: wherePost },
+    });
+    const totalItems = grouped.length;
+
+    const histories = await prisma.history.findMany({
+      where: { userId, post: wherePost },
+      distinct: ["postId"],
+      orderBy: { viewedAt: "desc" },
+      skip,
+      take: limit,
+      include: {
+        post: {
+          include: {
+            categories: { include: { category: true } },
+            images: true,
+            author: {
+              select: {
+                id: true,
+                fullname: true,
+                email: true,
+                avatar: true,
               },
-              masjidInfo: true,
             },
+            masjidInfo: true,
           },
         },
-      }),
-    ]);
+      },
+    });
 
     return {
       data: histories.map((h) => h.post),

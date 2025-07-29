@@ -8,11 +8,32 @@ export const readlistService = {
     });
   },
 
-  getUserReadLists: async (userId: string) => {
-    return prisma.readList.findMany({
-      where: { userId },
-      orderBy: { createdAt: "desc" },
+  getMyReadListPosts: async (
+    userId: string,
+    readListId: string,
+    page: number = 1,
+    limit: number = 10,
+    search: string = "",
+    type?: PostType,
+    categoryId?: string
+  ) => {
+    // 1) Validasi kepemilikan
+    const list = await prisma.readList.findUnique({
+      where: { id: readListId },
     });
+    if (!list || list.userId !== userId) {
+      throw new Error("Forbidden");
+    }
+
+    // 2) Panggil kembali fungsi pagination/filter yang sudah ada
+    return readlistService.getReadListPosts(
+      readListId,
+      page,
+      limit,
+      search,
+      type,
+      categoryId
+    );
   },
 
   addPostToReadList: async (readListId: string, postId: string) => {

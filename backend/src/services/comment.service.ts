@@ -23,59 +23,57 @@ export const commentService = {
     postId: string,
     userId?: string,
     page: number = 1,
-    limit: number = 10
+    limit: number = 10,
+    sort: "recent" | "popular" = "recent"
   ) => {
     const skip = (page - 1) * limit;
 
-    const [totalItems, comments] = await Promise.all([
-      prisma.comment.count({ where: { postId, parentId: null } }),
-      prisma.comment.findMany({
-        where: { postId, parentId: null },
-        skip,
-        take: limit,
-        orderBy: { createdAt: "desc" },
-        include: {
-          author: {
-            select: {
-              id: true,
-              fullname: true,
-              avatar: true,
-            },
+    // Ambil semua komentar utama (parentId null)
+    const allComments = await prisma.comment.findMany({
+      where: {
+        postId,
+        parentId: null,
+      },
+      include: {
+        author: {
+          select: {
+            id: true,
+            fullname: true,
+            avatar: true,
           },
-          _count: {
-            select: {
-              likes: true,
-              replies: true,
-            },
+        },
+        _count: {
+          select: {
+            likes: true,
+            replies: true,
           },
-          replies: {
-            orderBy: { createdAt: "asc" },
-            include: {
-              author: {
-                select: {
-                  id: true,
-                  fullname: true,
-                  avatar: true,
-                },
+        },
+        replies: {
+          orderBy: { createdAt: "asc" },
+          include: {
+            author: {
+              select: {
+                id: true,
+                fullname: true,
+                avatar: true,
               },
-              _count: {
-                select: { likes: true },
-              },
+            },
+            _count: {
+              select: { likes: true },
             },
           },
         },
-      }),
-    ]);
+      },
+    });
 
-    // Tambahkan isLiked status jika user login
+    // Cek komentar mana saja yang sudah di-like oleh user
     let likedMap: Record<string, boolean> = {};
-
     if (userId) {
       const likedComments = await prisma.commentLike.findMany({
         where: {
           userId,
           commentId: {
-            in: comments.map((c) => c.id),
+            in: allComments.map((c) => c.id),
           },
         },
         select: { commentId: true },
@@ -87,7 +85,8 @@ export const commentService = {
       }, {} as Record<string, boolean>);
     }
 
-    const enriched = comments.map((c) => ({
+    // Enrich dengan isLiked, totalLikes, totalReplies
+    let enriched = allComments.map((c) => ({
       ...c,
       isLiked: likedMap[c.id] || false,
       totalLikes: c._count.likes,
@@ -98,14 +97,27 @@ export const commentService = {
       })),
     }));
 
+    // Sorting
+    if (sort === "popular") {
+      enriched = enriched.sort((a, b) => b.totalLikes - a.totalLikes);
+    } else {
+      enriched = enriched.sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+    }
+
+    // Pagination manual
+    const paginated = enriched.slice(skip, skip + limit);
+
     return {
-      data: enriched,
+      data: paginated,
       pagination: {
         currentPage: page,
-        totalPages: Math.ceil(totalItems / limit),
-        totalItems,
+        totalPages: Math.ceil(enriched.length / limit),
+        totalItems: enriched.length,
         itemsPerPage: limit,
-        hasNextPage: skip + enriched.length < totalItems,
+        hasNextPage: skip + paginated.length < enriched.length,
         hasPrevPage: page > 1,
       },
     };

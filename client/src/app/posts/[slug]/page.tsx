@@ -52,6 +52,8 @@ import useSWR from "swr";
 import { TipTapEditor } from "@/components/tiptap-editor";
 import { useAuth } from "@/app/providers";
 import { useReaderControls } from "@/hooks/use-reader-controls";
+import { CommentSection } from "@/components/comment/comment-section";
+import { BookmarkService } from "@/service/bookmark.service";
 
 interface PostDetailPageProps {
   params: {
@@ -67,7 +69,7 @@ const fetcher = async (url: string) => {
 };
 
 export default function PostDetailPage({ params }: PostDetailPageProps) {
-  const { slug } = React.use(params);
+  const { slug } = React.use(params as unknown as Promise<{ slug: string }>);
   const router = useRouter();
   const { user } = useAuth();
   const { showControls } = useReaderControls();
@@ -167,7 +169,10 @@ export default function PostDetailPage({ params }: PostDetailPageProps) {
     }
   };
 
-  const handleFieldChange = (field: keyof UpdatePostPayload, value: any) => {
+  const handleFieldChange = <T extends keyof UpdatePostPayload>(
+    field: T,
+    value: UpdatePostPayload[T]
+  ) => {
     setEditData((prev) => ({ ...prev, [field]: value }));
     setHasChanges(true);
   };
@@ -217,12 +222,48 @@ export default function PostDetailPage({ params }: PostDetailPageProps) {
     );
   };
 
-  const handleBookmark = () => {
-    setIsBookmarked(!isBookmarked);
-    setBookmarkCount((prev) => (isBookmarked ? prev - 1 : prev + 1));
-    notify.success(
-      isBookmarked ? "Bookmark dihapus" : "Ditambahkan ke bookmark"
-    );
+  useEffect(() => {
+    const checkBookmarkStatus = async () => {
+      if (!post?.id) return;
+
+      try {
+        const res = await BookmarkService.getAll();
+        const bookmarkedPosts: Post[] = res.data.data;
+
+        const isAlreadyBookmarked = bookmarkedPosts.some(
+          (bookmarkedPost: Post) => bookmarkedPost.id === post.id
+        );
+
+        setIsBookmarked(isAlreadyBookmarked);
+      } catch (error) {
+        console.error("Gagal cek status bookmark:", error);
+      }
+    };
+
+    checkBookmarkStatus();
+  }, [post?.id]);
+
+  const handleBookmark = async () => {
+    if (!post) {
+      notify.error("Data post tidak tersedia");
+      return;
+    }
+
+    try {
+      if (isBookmarked) {
+        await BookmarkService.remove(post.id);
+        setBookmarkCount((prev) => prev - 1);
+        notify.success("Bookmark dihapus");
+      } else {
+        await BookmarkService.add(post.id);
+        setBookmarkCount((prev) => prev + 1);
+        notify.success("Ditambahkan ke bookmark");
+      }
+      setIsBookmarked(!isBookmarked);
+    } catch (error) {
+      notify.error("Gagal memperbarui bookmark");
+      console.error("Bookmark error:", error);
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -614,6 +655,8 @@ export default function PostDetailPage({ params }: PostDetailPageProps) {
 
           {/* Masjid Info (if applicable) */}
           {post.type === "masjid" && <MasjidInfoCard post={post} />}
+
+          <CommentSection postId={post.id} />
 
           {/* Related Posts */}
           <RelatedPosts currentPost={post} />

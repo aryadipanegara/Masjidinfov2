@@ -13,9 +13,27 @@ export const createReadList = async (req: Request, res: Response) => {
 
 export const getMyReadLists = async (req: Request, res: Response) => {
   const userId = (req as any).user?.userId;
-  if (!userId) return res.status(401).json({ error: "Unauthorized" });
+  if (!userId) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
 
-  const result = await readlistService.getUserReadLists(userId);
+  const { readListId } = req.params;
+
+  const page = parseInt(req.query.page as string, 10) || 1;
+  const limit = parseInt(req.query.limit as string, 10) || 10;
+  const search = (req.query.search as string) || "";
+  const type = req.query.type as PostType | undefined;
+  const categoryId = (req.query.categoryId as string) || undefined;
+
+  const result = await readlistService.getReadListPosts(
+    readListId,
+    page,
+    limit,
+    search,
+    type,
+    categoryId
+  );
+
   res.json(result);
 };
 

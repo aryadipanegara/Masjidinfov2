@@ -27,6 +27,7 @@ export const getCommentsByPost = async (req: Request, res: Response) => {
     const { postId } = req.params;
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
+    const sort = (req.query.sort as "recent" | "popular") || "recent";
 
     const userId = (req as any).user?.userId;
 
@@ -34,7 +35,8 @@ export const getCommentsByPost = async (req: Request, res: Response) => {
       postId,
       userId,
       page,
-      limit
+      limit,
+      sort
     );
 
     res.json(result);

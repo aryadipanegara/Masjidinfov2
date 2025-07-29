@@ -56,7 +56,7 @@ export const bookmarkService = {
 
     const wherePost: Prisma.PostWhereInput = {
       isDeleted: false,
-      AND: andConditions.length > 0 ? andConditions : undefined, // Opsional: jika tidak ada kondisi, jangan sertakan AND
+      AND: andConditions.length > 0 ? andConditions : undefined,
     };
 
     const [totalItems, bookmarks] = await Promise.all([
