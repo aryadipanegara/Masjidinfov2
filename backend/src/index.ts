@@ -13,6 +13,7 @@ import postsRoutes from "./routes/posts.routes";
 import masjidRoutes from "./routes/masjid.route";
 import bookmarkRoutes from "./routes/bookmark.route";
 import historyRoutes from "./routes/history.routes";
+import readlistRoutes from "./routes/readlist.routes";
 import passport from "passport";
 import cookieParser from "cookie-parser";
 import path from "path";
@@ -76,6 +77,7 @@ app.use("/api/posts", postsRoutes);
 app.use("/api/masjid", masjidRoutes);
 app.use("/api/bookmarks", bookmarkRoutes);
 app.use("/api/history", historyRoutes);
+app.use("/api/readlist", readlistRoutes);
 
 app.get("/", (req, res) => {
   res.json({ message: "API Berjalan!" });
