@@ -12,9 +12,11 @@ import imageRoutes from "./routes/image.route";
 import postsRoutes from "./routes/posts.routes";
 import masjidRoutes from "./routes/masjid.route";
 import bookmarkRoutes from "./routes/bookmark.route";
+import historyRoutes from "./routes/history.routes";
 import passport from "passport";
 import cookieParser from "cookie-parser";
 import path from "path";
+import { decodeJWT } from "./middleware/decodeUser";
 
 const app = express();
 
@@ -58,6 +60,7 @@ app.use(
 app.use(morgan("dev"));
 app.use(express.json());
 app.use(cookieParser());
+app.use(decodeJWT);
 
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
@@ -72,6 +75,7 @@ app.use("/images", express.static(path.join(__dirname, "../public/images")));
 app.use("/api/posts", postsRoutes);
 app.use("/api/masjid", masjidRoutes);
 app.use("/api/bookmarks", bookmarkRoutes);
+app.use("/api/history", historyRoutes);
 
 app.get("/", (req, res) => {
   res.json({ message: "API Berjalan!" });

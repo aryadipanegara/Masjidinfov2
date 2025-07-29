@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { postService } from "../services/posts.service";
 import { PostType } from "@prisma/client";
+import { historyService } from "../services/history.service";
 
 export const getPosts = async (req: Request, res: Response) => {
   const page = parseInt(req.query.page as string) || 1;
@@ -38,13 +39,22 @@ export const getPostBySlug = async (req: Request, res: Response) => {
       return res.status(404).json({ error: "Post not found" });
     }
 
+    // ⏺️ Simpan ke history jika user login
+    const userId = (req as any).user?.userId;
+    if (userId) {
+      try {
+        await historyService.recordHistory(userId, post.id);
+      } catch (err) {
+        console.error("Gagal menyimpan history:", err);
+      }
+    }
+
     res.json(post);
   } catch (error) {
     console.error("Error getting post by slug:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 };
-
 export const createPost = async (req: Request, res: Response) => {
   try {
     const authorId = (req as any).user?.userId;
