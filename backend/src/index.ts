@@ -11,6 +11,7 @@ import categoryRoutes from "./routes/category.route";
 import imageRoutes from "./routes/image.route";
 import postsRoutes from "./routes/posts.routes";
 import masjidRoutes from "./routes/masjid.route";
+import bookmarkRoutes from "./routes/bookmark.route";
 import passport from "passport";
 import cookieParser from "cookie-parser";
 import path from "path";
@@ -70,6 +71,7 @@ app.use("/api/images", imageRoutes);
 app.use("/images", express.static(path.join(__dirname, "../public/images")));
 app.use("/api/posts", postsRoutes);
 app.use("/api/masjid", masjidRoutes);
+app.use("/api/bookmarks", bookmarkRoutes);
 
 app.get("/", (req, res) => {
   res.json({ message: "API Berjalan!" });

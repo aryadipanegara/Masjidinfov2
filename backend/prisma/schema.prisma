@@ -17,7 +17,11 @@ datasource db {
 // ---------------- ENUMS ----------------
 enum PostType {
   masjid
-  artikel
+  sejarah
+  kisah
+  ziarah
+  refleksi
+  tradisi
 }
 
 enum UserRole {
@@ -55,6 +59,10 @@ model User {
   accounts         Account[]        @relation("userAccounts")
   sessions         Session[]        @relation("userPrismaSessions")
   userSessions     UserSession[]    @relation("userSessions")
+
+  bookmarks Bookmark[]
+  histories History[]
+  readlists ReadList[]
 
   @@index([email])
   @@index([hasGoogleAccount])
@@ -143,6 +151,10 @@ model Post {
   images      Image[]
   masjidInfo  Masjid?
 
+  bookmarks Bookmark[]
+  histories History[]
+  readlistItems ReadListItem[]
+
   @@map("post")
 }
 
@@ -198,4 +210,55 @@ model Masjid {
   post          Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
 
   @@map("masjid")
+}
+
+model Bookmark {
+  id        String   @id @default(ulid())
+  userId    String   @map("user_id")
+  postId    String   @map("post_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+  @@map("bookmark")
+}
+
+model History {
+  id        String   @id @default(ulid())
+  userId    String   @map("user_id")
+  postId    String   @map("post_id")
+  viewedAt  DateTime @default(now()) @map("viewed_at")
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([userId, viewedAt])
+  @@map("history")
+}
+
+model ReadList {
+  id        String         @id @default(ulid())
+  name      String         @map("name")
+  userId    String         @map("user_id")
+  createdAt DateTime       @default(now()) @map("created_at")
+
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     ReadListItem[]
+
+  @@map("read_list")
+}
+
+model ReadListItem {
+  id          String     @id @default(ulid())
+  readListId  String     @map("read_list_id")
+  postId      String     @map("post_id")
+  addedAt     DateTime   @default(now()) @map("added_at")
+
+  readList    ReadList   @relation(fields: [readListId], references: [id], onDelete: Cascade)
+  post        Post       @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([readListId, postId])
+  @@map("read_list_item")
 }

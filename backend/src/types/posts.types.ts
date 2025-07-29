@@ -1,5 +1,5 @@
 export type CreatePostPayload = {
-  type: "masjid" | "artikel";
+  type: "masjid" | "sejarah" | "kisah" | "ziarah" | "refleksi" | "tradisi";
   title: string;
   slug: string;
   excerpt?: string;
