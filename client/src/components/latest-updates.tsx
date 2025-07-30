@@ -102,7 +102,7 @@ export function LatestUpdates() {
               transition={{ duration: 0.6, delay: index * 0.05 }}
               viewport={{ once: true }}
             >
-              <Card className="overflow-hidden hover:shadow-xl transition-all duration-300 group h-full">
+              <Card className="overflow-hidden hover:shadow-xl transition-all duration-300 group h-full p-0">
                 <div className="relative aspect-[3/4] overflow-hidden">
                   <img
                     src={`${backendBaseUrl}${post.coverImage}`}

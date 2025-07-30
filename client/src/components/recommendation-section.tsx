@@ -77,7 +77,7 @@ export function RecommendationSection() {
                   animate={{ opacity: 1, scale: 1 }}
                   className="flex-none"
                 >
-                  <Card className="overflow-hidden hover:shadow-lg transition-all duration-300 group">
+                  <Card className="overflow-hidden hover:shadow-lg transition-all duration-300 group p-0">
                     <div className="relative aspect-[2/3] overflow-hidden">
                       <img
                         src={`${backendBaseUrl}${post.coverImage}`}

@@ -14,12 +14,7 @@ const router = Router();
 
 router.get("/announcement", getActiveAnnouncement);
 
-router.get(
-  "/",
-  authenticate,
-  authorize("ADMIN", "SUPER_ADMIN"),
-  getAllAnnouncements
-);
+router.get("/", getAllAnnouncements);
 router.post(
   "/",
   authenticate,

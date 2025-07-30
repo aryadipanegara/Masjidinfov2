@@ -32,6 +32,7 @@ import { PostService } from "@/service/posts.service";
 import useSWR from "swr";
 import { debounce } from "lodash";
 import { Input } from "./ui/input";
+import { LoginDialog } from "./auth/login-dialog";
 
 const navigation = [
   { name: "Beranda", href: "/", icon: HomeIcon },
@@ -47,6 +48,7 @@ export function MainNavbar() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [loginOpen, setLoginOpen] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
 
   const { data: searchResults, isLoading: searchLoading } = useSWR(
@@ -199,7 +201,7 @@ export function MainNavbar() {
                             onClick={handleViewAllResults}
                             className="text-xs text-primary hover:underline w-full text-left"
                           >
-                            Lihat semua hasil untuk "{searchQuery}"
+                            Lihat semua hasil untuk {searchQuery}
                           </button>
                         </div>
                       </div>
@@ -277,14 +279,13 @@ export function MainNavbar() {
                 </DropdownMenu>
               ) : (
                 <div className="flex items-center space-x-2">
-                  <Button variant="ghost" size="sm" asChild>
-                    <Link href="/login">
-                      <LogInIcon className="mr-2 h-4 w-4" />
-                      Login
-                    </Link>
-                  </Button>
-                  <Button size="sm" asChild>
-                    <Link href="/register">Daftar</Link>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setLoginOpen(true)}
+                  >
+                    <LogInIcon className="mr-2 h-4 w-4" />
+                    Login
                   </Button>
                 </div>
               )}
@@ -373,7 +374,7 @@ export function MainNavbar() {
                                 }}
                                 className="text-xs text-primary hover:underline w-full text-left"
                               >
-                                Lihat semua hasil untuk "{searchQuery}"
+                                Lihat semua hasil untuk {searchQuery}
                               </button>
                             </div>
                           </div>
@@ -451,10 +452,12 @@ export function MainNavbar() {
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : (
-                <Button variant="ghost" size="sm" asChild>
-                  <Link href="/login">
-                    <UserIcon className="h-4 w-4" />
-                  </Link>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setLoginOpen(true)}
+                >
+                  <UserIcon className="h-4 w-4" />
                 </Button>
               )}
             </div>
@@ -484,6 +487,7 @@ export function MainNavbar() {
           })}
         </div>
       </div>
+      <LoginDialog open={loginOpen} onOpenChange={setLoginOpen} />
 
       {/* Mobile Bottom Padding */}
       <div className="lg:hidden h-16" />
