@@ -54,6 +54,7 @@ import { useAuth } from "@/app/providers";
 import { useReaderControls } from "@/hooks/use-reader-controls";
 import { CommentSection } from "@/components/comment/comment-section";
 import { BookmarkService } from "@/service/bookmark.service";
+import Image from "next/image";
 
 interface PostDetailPageProps {
   params: {
@@ -244,6 +245,11 @@ export default function PostDetailPage({ params }: PostDetailPageProps) {
   }, [post?.id]);
 
   const handleBookmark = async () => {
+    if (!user) {
+      notify.info("Silakan login terlebih dahulu untuk bookmark post ini.");
+      return;
+    }
+
     if (!post) {
       notify.error("Data post tidak tersedia");
       return;
@@ -257,12 +263,12 @@ export default function PostDetailPage({ params }: PostDetailPageProps) {
       } else {
         await BookmarkService.add(post.id);
         setBookmarkCount((prev) => prev + 1);
-        notify.success("Ditambahkan ke bookmark");
+        notify.success("Berhasil ditambahkan ke bookmark!");
       }
       setIsBookmarked(!isBookmarked);
     } catch (error) {
-      notify.error("Gagal memperbarui bookmark");
       console.error("Bookmark error:", error);
+      notify.error("Terjadi kesalahan saat memperbarui bookmark.");
     }
   };
 
@@ -412,19 +418,25 @@ export default function PostDetailPage({ params }: PostDetailPageProps) {
                     className="hidden"
                   />
                   {editData.coverImage && (
-                    <img
+                    <Image
                       src={`${backendBaseUrl}${editData.coverImage}`}
                       alt="Cover preview"
+                      width={300}
+                      height={225}
                       className="w-full aspect-[3/4] object-cover rounded-lg"
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                     />
                   )}
                 </div>
               ) : (
                 post.coverImage && (
-                  <img
+                  <Image
                     src={`${backendBaseUrl}${post.coverImage}`}
                     alt={post.title || "Cover"}
+                    width={300}
+                    height={225}
                     className="w-full aspect-[3/4] object-cover rounded-lg shadow-lg"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                   />
                 )
               )}
@@ -470,10 +482,6 @@ export default function PostDetailPage({ params }: PostDetailPageProps) {
 
               {/* Action Buttons */}
               <div className="flex flex-wrap gap-3">
-                <Button className="bg-primary hover:bg-primary/90">
-                  <BookOpenIcon className="w-4 h-4 mr-2" />
-                  Baca
-                </Button>
                 <Button
                   variant="outline"
                   onClick={handleBookmark}

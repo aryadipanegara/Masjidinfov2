@@ -1,7 +1,7 @@
 import { createMetadata } from "@/lib/meta-data";
 import { HeroCarousel } from "@/components/hero-carausel";
 import { RecommendationSection } from "@/components/recommendation-section";
-import { LatestUpdates } from "@/components/latest-updates";
+import { HistorySection } from "@/components/libary/history-section";
 
 export const metadata = createMetadata({
   title: "Explore",
@@ -11,19 +11,22 @@ export const metadata = createMetadata({
 
 export default function PostsPage() {
   return (
-    <section className="py-12 bg-background px-4">
-      <div className="container mx-auto ">
+    <div className="min-h-screen">
+      <main className="container mx-auto px-4">
         <HeroCarousel />
         {/* Recommended Posts Section */}
         <div className="container mx-auto px-4 py-8">
           <RecommendationSection />
         </div>
 
-        {/* All Posts Section */}
         <div className="container mx-auto px-4 py-8">
-          <LatestUpdates />
+          <h2 className="text-xl lg:text-3xl font-semibold mb-6">
+            Lanjut Baca
+          </h2>
+
+          <HistorySection />
         </div>
-      </div>
-    </section>
+      </main>
+    </div>
   );
 }

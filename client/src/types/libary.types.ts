@@ -60,7 +60,7 @@ export interface HistoryItem {
   coverImage?: string;
   excerpt?: string;
   createdAt: string;
-  viewedAt: string;
+  publishedAt: string;
   author: {
     id: string;
     fullname: string;

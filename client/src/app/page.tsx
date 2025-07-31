@@ -18,26 +18,22 @@ export default function HomePage() {
       <MainNavbar />
       <main className="container mx-auto px-4">
         <HeroBanner />
-        <div className="pb-8">
-          <h2 className="text-xl lg:text-3xl font-semibold mb-6 px-4">
+        <div className="pb-8  px-4">
+          <h2 className="text-xl lg:text-3xl font-semibold mb-6">
             Rekomendasi
           </h2>
           <RecommendationSection />
         </div>
 
         {/* Updates */}
-        <div className="pb-8">
-          <h2 className="text-xl lg:text-3xl font-semibold mb-6 px-4">
-            Updates
-          </h2>
+        <div className="pb-8 px-4">
+          <h2 className="text-xl lg:text-3xl font-semibold mb-6">Updates</h2>
           <LatestUpdates />
         </div>
 
         {/* Populer */}
-        <div className="">
-          <h2 className="text-xl lg:text-3xl font-semibold mb-6 px-4">
-            Populer
-          </h2>
+        <div className="px-4">
+          <h2 className="text-xl lg:text-3xl font-semibold mb-6">Populer</h2>
           <PopularSection />
         </div>
       </main>

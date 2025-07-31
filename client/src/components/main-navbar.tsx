@@ -179,7 +179,7 @@ export function MainNavbar() {
                         <div className="px-3 py-2 text-xs font-medium text-muted-foreground border-b">
                           Posts
                         </div>
-                        {searchResults.map((post: any) => (
+                        {searchResults.map((post) => (
                           <button
                             key={post.id}
                             onClick={() => handleSearchSelect(post.slug)}
@@ -338,7 +338,7 @@ export function MainNavbar() {
                           </div>
                         ) : searchResults && searchResults.length > 0 ? (
                           <div className="py-2">
-                            {searchResults.map((post: any) => (
+                            {searchResults.map((post) => (
                               <button
                                 key={post.id}
                                 onClick={() => {
@@ -385,7 +385,6 @@ export function MainNavbar() {
                 </DropdownMenuContent>
               </DropdownMenu>
 
-              {/* Mobile Profile - sama seperti sebelumnya */}
               {loading ? (
                 <div className="h-8 w-8 animate-pulse rounded-full bg-muted" />
               ) : user ? (
@@ -452,13 +451,23 @@ export function MainNavbar() {
                   </DropdownMenuContent>
                 </DropdownMenu>
               ) : (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setLoginOpen(true)}
-                >
-                  <UserIcon className="h-4 w-4" />
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm">
+                      <UserIcon className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-48" align="end">
+                    {/* Login (buka modal) */}
+                    <DropdownMenuItem
+                      className="flex items-center"
+                      onClick={() => setLoginOpen(true)}
+                    >
+                      <LogInIcon className="mr-2 h-4 w-4" />
+                      Login
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               )}
             </div>
           </div>
@@ -466,31 +475,40 @@ export function MainNavbar() {
       </nav>
 
       {/* Mobile Bottom Navigation */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-background border-t">
-        <div className="grid grid-cols-4 h-16">
+      <div
+        className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-background border-t shadow-lg"
+        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      >
+        <nav className="flex justify-around items-center h-20">
           {navigation.map((item) => {
             const isActive = pathname === item.href;
             return (
               <Link
                 key={item.name}
                 href={item.href}
-                className={`flex flex-col items-center justify-center space-y-1 transition-colors ${
-                  isActive
-                    ? "text-primary bg-primary/10"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
+                className={`
+            flex flex-col items-center justify-center space-y-1 transition-colors
+            ${
+              isActive
+                ? "text-primary"
+                : "text-muted-foreground hover:text-foreground"
+            }
+          `}
+                aria-current={isActive ? "page" : undefined}
               >
-                <item.icon className="h-5 w-5" />
-                <span className="text-xs font-medium">{item.name}</span>
+                <item.icon
+                  className={`h-6 w-6 ${isActive ? "" : "opacity-80"}`}
+                />
+                <span className="text-[10px]">{item.name}</span>
               </Link>
             );
           })}
-        </div>
+        </nav>
       </div>
+
       <LoginDialog open={loginOpen} onOpenChange={setLoginOpen} />
 
-      {/* Mobile Bottom Padding */}
-      <div className="lg:hidden h-16" />
+      {/* <div className="lg:hidden h-16" /> */}
     </>
   );
 }

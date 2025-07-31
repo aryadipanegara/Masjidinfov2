@@ -12,26 +12,30 @@ import useSWR from "swr";
 import notify from "@/lib/notify";
 import handleErrorResponse from "@/utils/handleErrorResponse";
 import { HistoryItem, PaginationData } from "@/types/libary.types";
+import { useAuth } from "@/app/providers";
 
 export function HistorySection() {
+  const { user } = useAuth();
   const [page, setPage] = useState(1);
-  const limit = 12;
+  const limit = 10;
+
+  const swrKey = user ? ["/history", { page, limit }] : null;
 
   const {
     data: historyResponse,
     error,
     isLoading,
     mutate,
-  } = useSWR(
-    ["/history", { page, limit }],
-    () => HistoryService.getAll({ page, limit }),
-    {
-      revalidateOnFocus: false,
-    }
-  );
+  } = useSWR(swrKey, () => HistoryService.getAll({ page, limit }), {
+    revalidateOnFocus: false,
+    revalidateOnReconnect: false,
+    refreshInterval: 0,
+    dedupingInterval: 60000,
+  });
 
   const history = historyResponse?.data?.data || [];
   const pagination = historyResponse?.data?.pagination as PaginationData;
+  const backendBaseUrl = process.env.NEXT_PUBLIC_BACKEND_BASE_URL || "";
 
   const handleRemoveHistory = async (postId: string) => {
     try {
@@ -76,6 +80,21 @@ export function HistorySection() {
     );
   }
 
+  if (!user) {
+    return (
+      <main className="py-8 md:pb-8">
+        <div className="container mx-auto px-4">
+          <div className="text-center py-16">
+            <h1 className="text-3xl font-bold mb-4">Wajib Login!</h1>
+            <p className="text-muted-foreground mb-8 max-w-md mx-auto">
+              Login dulu buat melihat library kamu
+            </p>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
   if (error) {
     return (
       <div className="text-center py-12">
@@ -100,8 +119,6 @@ export function HistorySection() {
     );
   }
 
-  const backendBaseUrl = process.env.NEXT_PUBLIC_BACKEND_BASE_URL || "";
-
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -114,7 +131,7 @@ export function HistorySection() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: index * 0.1 }}
             >
-              <Card className="overflow-hidden hover:shadow-xl transition-all duration-300 group h-full">
+              <Card className="overflow-hidden hover:shadow-xl transition-all duration-300 group h-full p-0">
                 <div className="relative aspect-[3/4] overflow-hidden">
                   <img
                     src={`${backendBaseUrl}${historyItem.coverImage}`}
@@ -165,13 +182,15 @@ export function HistorySection() {
                               .join("")}
                           </AvatarFallback>
                         </Avatar>
-                        <span className="truncate">
-                          {historyItem.author.fullname}
+                        <span className="truncate max-w-[120px]">
+                          {historyItem.author.fullname.length > 20
+                            ? `${historyItem.author.fullname.slice(0, 17)}...`
+                            : historyItem.author.fullname}
                         </span>
                       </div>
                       <div className="flex items-center gap-1">
                         <HistoryIcon className="h-3 w-3" />
-                        <span>{formatDate(historyItem.viewedAt)}</span>
+                        <span>{formatDate(historyItem.publishedAt)}</span>
                       </div>
                     </div>
                   </div>

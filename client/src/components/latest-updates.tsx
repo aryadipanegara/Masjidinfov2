@@ -17,6 +17,7 @@ import {
 import useSWR from "swr";
 import type { Post } from "@/types/posts.types";
 import { PostService } from "@/service/posts.service";
+import Image from "next/image";
 
 export function LatestUpdates() {
   const [currentPage, setCurrentPage] = useState(1);
@@ -90,7 +91,7 @@ export function LatestUpdates() {
   const backendBaseUrl = process.env.NEXT_PUBLIC_BACKEND_BASE_URL || "";
 
   return (
-    <div className="container mx-auto px-4">
+    <div className="container mx-auto">
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-8">
         {data?.data?.map((post: Post, index: number) => {
           const TypeIcon = getPostTypeIcon(post.type);
@@ -104,10 +105,13 @@ export function LatestUpdates() {
             >
               <Card className="overflow-hidden hover:shadow-xl transition-all duration-300 group h-full p-0">
                 <div className="relative aspect-[3/4] overflow-hidden">
-                  <img
+                  <Image
                     src={`${backendBaseUrl}${post.coverImage}`}
                     alt={post.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    fill
+                    className="object-cover group-hover:scale-105 transition-transform duration-300"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                    priority={false}
                   />
                   <div className="absolute top-2 left-2">
                     <Badge className={getPostTypeColor(post.type)}>
@@ -146,7 +150,11 @@ export function LatestUpdates() {
                               .join("")}
                           </AvatarFallback>
                         </Avatar>
-                        <span className="truncate">{post.author.fullname}</span>
+                        <span className="truncate max-w-[120px]">
+                          {post.author.fullname.length > 20
+                            ? `${post.author.fullname.slice(0, 17)}...`
+                            : post.author.fullname}
+                        </span>
                       </div>
                       <div className="flex items-center gap-1">
                         <CalendarIcon className="h-3 w-3" />

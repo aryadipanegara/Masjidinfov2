@@ -45,7 +45,11 @@ export function CommentSection({ postId }: CommentSectionProps) {
     mutate,
   } = useSWR(
     [`/comments/${postId}`, filters],
-    () => CommentService.getByPostId(postId, filters),
+    () =>
+      CommentService.getByPostId(postId, {
+        ...filters,
+        sort: filters.sort === "oldest" ? "popular" : filters.sort,
+      }),
     {
       revalidateOnFocus: false,
       revalidateOnReconnect: true,
@@ -80,7 +84,6 @@ export function CommentSection({ postId }: CommentSectionProps) {
         await CommentService.like(commentId);
       }
 
-      // Optimistic update
       await mutate(
         (currentData) => {
           if (!currentData?.data?.data) return currentData;
@@ -96,7 +99,6 @@ export function CommentSection({ postId }: CommentSectionProps) {
                     : comment.totalLikes + 1,
                 };
               }
-              // Also check replies
               if (comment.replies && comment.replies.length > 0) {
                 return {
                   ...comment,
@@ -118,11 +120,10 @@ export function CommentSection({ postId }: CommentSectionProps) {
         { revalidate: false }
       );
 
-      // Revalidate after a short delay to get fresh data
       setTimeout(() => mutate(), 500);
     } catch (err) {
       handleErrorResponse(err);
-      mutate(); // Revert on error
+      mutate();
     }
   };
 
@@ -163,13 +164,17 @@ export function CommentSection({ postId }: CommentSectionProps) {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        {/* Title */}
         <div className="flex items-center gap-3">
-          <MessageCircleIcon className="h-6 w-6 text-gray-600" />
-          <h3 className="text-xl font-semibold">{totalComments} Komentar</h3>
+          <MessageCircleIcon className="h-6 w-6 text-gray-600 flex-shrink-0" />
+          <h3 className="text-lg sm:text-xl font-semibold">
+            {totalComments} Komentar
+          </h3>
         </div>
 
-        <div className="flex items-center gap-2">
+        {/* Sort Options */}
+        <div className="flex flex-wrap gap-2">
           {sortOptions.map((option) => {
             const Icon = option.icon;
             return (
@@ -178,10 +183,11 @@ export function CommentSection({ postId }: CommentSectionProps) {
                 variant={filters.sort === option.value ? "default" : "outline"}
                 size="sm"
                 onClick={() => handleSortChange(option.value)}
-                className="h-8"
+                className="h-8 flex items-center text-sm"
               >
                 <Icon className="h-3 w-3 mr-1" />
-                {option.label}
+                <span className="hidden xs:inline">{option.label}</span>
+                <span className="xs:hidden">{option.label.slice(0, 5)}...</span>
               </Button>
             );
           })}

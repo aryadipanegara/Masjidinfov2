@@ -1,4 +1,5 @@
 "use client";
+
 import { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BookmarkIcon, ListIcon, HistoryIcon } from "lucide-react";
@@ -22,13 +23,13 @@ export default function LibraryPage() {
         <main className="py-8 pb-20 md:pb-8">
           <div className="container mx-auto px-4">
             <div className="animate-pulse">
-              <div className="h-8 bg-gray-200 dark:bg-gray-800 rounded w-48 mb-8" />
-              <div className="h-10 bg-gray-200 dark:bg-gray-800 rounded w-full mb-8" />
+              <div className="h-8 bg-gray-200 rounded w-48 mb-8" />
+              <div className="h-10 bg-gray-200 rounded w-full mb-8" />
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {[...Array(8)].map((_, i) => (
                   <div
                     key={i}
-                    className="aspect-[3/4] bg-gray-200 dark:bg-gray-800 rounded-lg"
+                    className="aspect-[3/4] bg-gray-200 rounded-lg"
                   />
                 ))}
               </div>
@@ -47,22 +48,11 @@ export default function LibraryPage() {
         <main className="py-8 pb-20 md:pb-8">
           <div className="container mx-auto px-4">
             <div className="text-center py-16">
-              <div className="mb-8">
-                <img
-                  src="/placeholder.svg?height=200&width=200&text=Login+Required"
-                  alt="Login Required"
-                  className="mx-auto mb-6 w-48 h-48 object-contain"
-                />
-              </div>
               <h1 className="text-3xl font-bold mb-4">Wajib Login!</h1>
               <p className="text-muted-foreground mb-8 max-w-md mx-auto">
                 Login dulu buat melihat library kamu
               </p>
-              <Button
-                asChild
-                size="lg"
-                className="bg-purple-600 hover:bg-purple-700"
-              >
+              <Button asChild size="lg">
                 <Link href="/login">Login</Link>
               </Button>
             </div>
@@ -76,8 +66,8 @@ export default function LibraryPage() {
   return (
     <div className="min-h-screen">
       <MainNavbar />
-      <main className="py-8 pb-20 md:pb-8">
-        <div className="container mx-auto px-4">
+      <main className="py-8 pb-20 md:pb-8 px-14">
+        <div className="container mx-auto">
           <div className="mb-8">
             <h1 className="text-3xl font-bold mb-2">Library</h1>
             <p className="text-muted-foreground">

@@ -42,7 +42,7 @@ export function RecommendationSection() {
   const backendBaseUrl = process.env.NEXT_PUBLIC_BACKEND_BASE_URL || "";
 
   return (
-    <div className="container mx-auto px-4">
+    <div className="container mx-auto">
       {/* Tabs */}
       <div className="flex space-x-2 mb-6">
         {tabs.map((tab) => (
@@ -58,60 +58,80 @@ export function RecommendationSection() {
         ))}
       </div>
 
-      {/* Posts Grid */}
-      <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-8 gap-4 overflow-x-auto">
-        {isLoading
-          ? [...Array(12)].map((_, i) => (
-              <div key={i} className="flex-none animate-pulse">
-                <div className="aspect-[3/4] rounded-lg mb-3" />
-                <div className="h-4  rounded mb-2" />
-                <div className="h-3 rounded w-2/3" />
-              </div>
-            ))
-          : posts?.map((post: Post) => {
-              const TypeIcon = getPostTypeIcon(post.type);
-              return (
-                <motion.div
-                  key={post.id}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="flex-none"
-                >
-                  <Card className="overflow-hidden hover:shadow-lg transition-all duration-300 group p-0">
-                    <div className="relative aspect-[2/3] overflow-hidden">
-                      <img
-                        src={`${backendBaseUrl}${post.coverImage}`}
-                        alt={post.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                      <div className="absolute top-2 left-2">
-                        <Badge className={getPostTypeColor(post.type)}>
-                          <TypeIcon className="w-3 h-3 mr-1" />
-                          {post.type === "masjid" ? "Masjid" : "Artikel"}
-                        </Badge>
+      {/* Carousel Container */}
+      <div className="relative">
+        <div
+          className="flex gap-4 overflow-x-auto scrollbar-hide pb-4"
+          style={{
+            scrollbarWidth: "none",
+            msOverflowStyle: "none",
+            WebkitOverflowScrolling: "touch",
+          }}
+        >
+          {isLoading
+            ? [...Array(8)].map((_, i) => (
+                <div key={i} className="flex-none w-48 animate-pulse">
+                  <div className="aspect-[2/3] bg-gray-200 dark:bg-gray-700 rounded-lg mb-3" />
+                  <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded mb-2" />
+                  <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded w-2/3" />
+                </div>
+              ))
+            : posts?.map((post: Post) => {
+                const TypeIcon = getPostTypeIcon(post.type);
+                return (
+                  <motion.div
+                    key={post.id}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.3 }}
+                    className="flex-none w-48"
+                  >
+                    <Card className="overflow-hidden hover:shadow-lg transition-all duration-300 group p-0 h-full">
+                      <div className="relative aspect-[2/3] overflow-hidden">
+                        <img
+                          src={`${backendBaseUrl}${post.coverImage}`}
+                          alt={post.title}
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        />
+                        <div className="absolute top-2 left-2">
+                          <Badge className={getPostTypeColor(post.type)}>
+                            <TypeIcon className="w-3 h-3 mr-1" />
+                            {post.type === "masjid" ? "Masjid" : "Artikel"}
+                          </Badge>
+                        </div>
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                        <div className="absolute bottom-2 left-2 right-2 text-white">
+                          <h3 className="font-bold text-sm mb-1 line-clamp-2">
+                            <Link
+                              href={`/posts/${post.slug}`}
+                              className="hover:text-primary transition-colors"
+                            >
+                              {post.title}
+                            </Link>
+                          </h3>
+                          {post.excerpt && (
+                            <p className="text-xs opacity-90 line-clamp-1">
+                              {post.excerpt}
+                            </p>
+                          )}
+                        </div>
                       </div>
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                      <div className="absolute bottom-2 left-2 right-2 text-white">
-                        <h3 className="font-bold text-sm mb-1 line-clamp-2">
-                          <Link
-                            href={`/posts/${post.slug}`}
-                            className="hover:text-primary transition-colors"
-                          >
-                            {post.title}
-                          </Link>
-                        </h3>
-                        {post.excerpt && (
-                          <p className="text-xs opacity-90 line-clamp-1">
-                            {post.excerpt}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </Card>
-                </motion.div>
-              );
-            })}
+                    </Card>
+                  </motion.div>
+                );
+              })}
+        </div>
       </div>
+
+      <style jsx>{`
+        .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+      `}</style>
     </div>
   );
 }

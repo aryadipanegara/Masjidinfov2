@@ -5,7 +5,7 @@ import { MapPinIcon } from "lucide-react";
 
 export function MainFooter() {
   return (
-    <footer className="text-black py-8  bottom-0 w-full">
+    <footer className="text-black py-8 bottom-0 w-full">
       <div className="container mx-auto px-4">
         <div className="flex flex-col items-center justify-center space-y-4">
           <Link href="/" className="flex items-center space-x-2">
