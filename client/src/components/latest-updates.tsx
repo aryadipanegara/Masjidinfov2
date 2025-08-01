@@ -88,8 +88,6 @@ export function LatestUpdates() {
     );
   }
 
-  const backendBaseUrl = process.env.NEXT_PUBLIC_BACKEND_BASE_URL || "";
-
   return (
     <div className="container mx-auto">
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 mb-8">
@@ -106,7 +104,7 @@ export function LatestUpdates() {
               <Card className="overflow-hidden hover:shadow-xl transition-all duration-300 group h-full p-0">
                 <div className="relative aspect-[3/4] overflow-hidden">
                   <Image
-                    src={`${backendBaseUrl}${post.coverImage}`}
+                    src={`${post.coverImage}`}
                     alt={post.title}
                     fill
                     className="object-cover group-hover:scale-105 transition-transform duration-300"

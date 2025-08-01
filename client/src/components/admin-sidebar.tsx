@@ -1,3 +1,4 @@
+// AdminSidebar.tsx
 "use client";
 
 import * as React from "react";
@@ -8,7 +9,6 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
-  SidebarGroupContent,
   SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
@@ -38,20 +38,18 @@ import {
   ChevronRightIcon,
   LogOutIcon,
   UserIcon,
-  ShieldIcon,
-  DatabaseIcon,
-  BarChart3Icon,
   FileTextIcon,
   BellIcon,
-  HelpCircleIcon,
   CogIcon,
+  TagIcon,
+  ImageIcon,
+  MessageSquareIcon,
+  ActivityIcon,
 } from "lucide-react";
-import type { UserDetail } from "@/types/user.types";
 import { useRouter } from "next/navigation";
 import notify from "@/lib/notify";
 import handleErrorResponse from "@/utils/handleErrorResponse";
-import Cookies from "js-cookie";
-import { AuthService } from "@/service/auth.service";
+import { useAuth } from "@/app/providers";
 
 const data = {
   navMain: [
@@ -59,39 +57,32 @@ const data = {
       title: "Dashboard",
       url: "/dashboard",
       icon: LayoutDashboardIcon,
-      isActive: true,
     },
     {
-      title: "Master Data",
+      title: "Content",
       url: "#",
-      icon: DatabaseIcon,
+      icon: FileTextIcon,
       items: [
-        {
-          title: "Users",
-          url: "/dashboard/users",
-          icon: UsersIcon,
-        },
-        {
-          title: "Roles & Permissions",
-          url: "/dashboard/roles",
-          icon: ShieldIcon,
-        },
+        { title: "Posts", url: "/dashboard/posts", icon: FileTextIcon },
+        { title: "Categories", url: "/dashboard/categories", icon: TagIcon },
+        { title: "Media", url: "/dashboard/media", icon: ImageIcon },
       ],
     },
     {
-      title: "Analytics",
+      title: "User Management",
       url: "#",
-      icon: BarChart3Icon,
+      icon: UsersIcon,
       items: [
+        { title: "Users", url: "/dashboard/users", icon: UsersIcon },
         {
-          title: "User Analytics",
-          url: "/dashboard/analytics/users",
-          icon: UsersIcon,
+          title: "Comments",
+          url: "/dashboard/comments",
+          icon: MessageSquareIcon,
         },
         {
-          title: "System Reports",
-          url: "/dashboard/analytics/reports",
-          icon: FileTextIcon,
+          title: "Activities",
+          url: "/dashboard/activities",
+          icon: ActivityIcon,
         },
       ],
     },
@@ -101,46 +92,34 @@ const data = {
       icon: CogIcon,
       items: [
         {
-          title: "Settings",
-          url: "/dashboard/settings",
-          icon: SettingsIcon,
-        },
-        {
-          title: "Notifications",
-          url: "/dashboard/notifications",
+          title: "Announcements",
+          url: "/dashboard/announcements",
           icon: BellIcon,
         },
-        {
-          title: "Help & Support",
-          url: "/dashboard/help",
-          icon: HelpCircleIcon,
-        },
+        { title: "Settings", url: "/dashboard/settings", icon: SettingsIcon },
       ],
     },
   ],
 };
-
-interface AdminSidebarProps extends React.ComponentProps<typeof Sidebar> {
-  user: UserDetail | null;
-}
-
-export function AdminSidebar({ user, ...props }: AdminSidebarProps) {
+export function AdminSidebar({
+  ...props
+}: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
   const router = useRouter();
 
+  const { user, loading, logout } = useAuth();
+
   const handleLogout = async () => {
-    const loadingToastId = notify.loading("Logging out...");
+    const toastId = notify.loading("Logging out...");
     try {
-      await AuthService.logout();
-      notify.dismiss(loadingToastId);
+      await logout();
+      notify.dismiss(toastId);
       notify.success("Logout berhasil!");
-      Cookies.remove("authToken");
-      router.push("/login");
+      router.push("/");
     } catch (err: unknown) {
-      handleErrorResponse(err, loadingToastId);
+      handleErrorResponse(err, toastId);
     }
   };
-
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
@@ -153,7 +132,7 @@ export function AdminSidebar({ user, ...props }: AdminSidebarProps) {
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-semibold">Admin Panel</span>
-                  <span className="truncate text-xs">Management System</span>
+                  <span className="truncate text-xs">Masjid Info</span>
                 </div>
               </Link>
             </SidebarMenuButton>
@@ -190,7 +169,7 @@ export function AdminSidebar({ user, ...props }: AdminSidebarProps) {
                         </CollapsibleTrigger>
                         <CollapsibleContent>
                           <SidebarMenuSub>
-                            {item.items?.map((subItem) => (
+                            {item.items.map((subItem) => (
                               <SidebarMenuSubItem key={subItem.title}>
                                 <SidebarMenuSubButton
                                   asChild
@@ -241,19 +220,23 @@ export function AdminSidebar({ user, ...props }: AdminSidebarProps) {
                       alt={user?.fullname || ""}
                     />
                     <AvatarFallback className="rounded-lg">
-                      {user?.fullname
-                        ?.split(" ")
-                        .map((n) => n[0])
-                        .join("")
-                        .toUpperCase() || "AD"}
+                      {loading
+                        ? "..."
+                        : user?.fullname
+                        ? user.fullname
+                            .split(" ")
+                            .map((n: string) => n[0])
+                            .join("")
+                            .toUpperCase()
+                        : "AD"}
                     </AvatarFallback>
                   </Avatar>
                   <div className="grid flex-1 text-left text-sm leading-tight">
                     <span className="truncate font-semibold">
-                      {user?.fullname || "Admin"}
+                      {loading ? "Loading..." : user?.fullname || "User"}
                     </span>
                     <span className="truncate text-xs">
-                      {user?.email || "admin@example.com"}
+                      {loading ? "..." : user?.email || "user@example.com"}
                     </span>
                   </div>
                   <ChevronRightIcon className="ml-auto size-4" />
@@ -265,13 +248,17 @@ export function AdminSidebar({ user, ...props }: AdminSidebarProps) {
                 align="end"
                 sideOffset={4}
               >
-                <DropdownMenuItem>
-                  <UserIcon className="mr-2 h-4 w-4" />
-                  Profile
+                <DropdownMenuItem asChild>
+                  <Link href="/dashboard/profile">
+                    <UserIcon className="mr-2 h-4 w-4" />
+                    Profile
+                  </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <SettingsIcon className="mr-2 h-4 w-4" />
-                  Settings
+                <DropdownMenuItem asChild>
+                  <Link href="/dashboard/settings">
+                    <SettingsIcon className="mr-2 h-4 w-4" />
+                    Settings
+                  </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleLogout}>
                   <LogOutIcon className="mr-2 h-4 w-4" />

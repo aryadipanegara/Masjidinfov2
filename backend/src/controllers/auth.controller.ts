@@ -98,6 +98,25 @@ export const resetPassword = async (req: Request, res: Response) => {
   }
 };
 
+export const setPassword = async (req: Request, res: Response) => {
+  const { userId, newPassword } = req.body;
+
+  if (!userId) {
+    return res.status(401).json({ error: "pas" });
+  }
+
+  if (!newPassword || newPassword.length < 6) {
+    return res.status(400).json({ error: "Password minimal 6 karakter" });
+  }
+
+  try {
+    const result = await authService.setPassword(userId, newPassword);
+    res.json(result);
+  } catch (err: any) {
+    res.status(400).json({ error: err.message });
+  }
+};
+
 export const refreshToken = async (
   req: Request,
   res: Response

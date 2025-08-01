@@ -4,6 +4,7 @@ import path from "path";
 
 const UPLOAD_DIR = path.join(__dirname, "../../public/images");
 const PUBLIC_URL_PREFIX = "/images";
+
 const ALLOWED_MIME_TYPES = [
   "image/jpeg",
   "image/jpg",
@@ -14,15 +15,13 @@ const ALLOWED_MIME_TYPES = [
 
 const ensureDirectoryExistence = (filePath: string) => {
   const dirname = path.dirname(filePath);
-  if (fs.existsSync(dirname)) {
-    return true;
+  if (!fs.existsSync(dirname)) {
+    fs.mkdirSync(dirname, { recursive: true });
   }
-  fs.mkdirSync(dirname, { recursive: true });
 };
 
-const isAllowedMimeType = (mimetype: string): boolean => {
-  return ALLOWED_MIME_TYPES.includes(mimetype);
-};
+const isAllowedMimeType = (mimetype: string): boolean =>
+  ALLOWED_MIME_TYPES.includes(mimetype);
 
 export const imageService = {
   uploadImage: async (
@@ -31,12 +30,12 @@ export const imageService = {
     mimetype: string,
     altText?: string,
     caption?: string,
-    postId?: string
+    postId?: string,
+    userId?: string
   ) => {
     if (!originalname || !mimetype) {
       throw new Error("Nama file dan tipe mime diperlukan.");
     }
-
     if (!isAllowedMimeType(mimetype)) {
       throw new Error(
         `Tipe file tidak didukung: ${mimetype}. Hanya ${ALLOWED_MIME_TYPES.join(
@@ -47,18 +46,17 @@ export const imageService = {
 
     try {
       const fileExt = path.extname(originalname).toLowerCase() || ".jpg";
-      const filenameWithoutExt = path
+      const baseName = path
         .basename(originalname, fileExt)
         .replace(/[^a-zA-Z0-9-_]/g, "_");
-      const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-      const filename = `${filenameWithoutExt}-${uniqueSuffix}${fileExt}`;
+      const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+      const filename = `${baseName}-${uniqueSuffix}${fileExt}`;
 
       const fullPath = path.join(UPLOAD_DIR, filename);
-
       ensureDirectoryExistence(fullPath);
       fs.writeFileSync(fullPath, buffer);
 
-      const publicUrl = `${PUBLIC_URL_PREFIX}/${filename}`;
+      const publicUrl = `${process.env.BACKEND_URL}${PUBLIC_URL_PREFIX}/${filename}`;
 
       const savedImage = await prisma.image.create({
         data: {
@@ -66,14 +64,15 @@ export const imageService = {
           altText: altText || null,
           caption: caption || null,
           postId: postId || null,
+          uploadedById: userId || null,
         },
       });
 
       return savedImage;
-    } catch (error: any) {
-      console.error("Local Upload Error:", error);
+    } catch (err: any) {
+      console.error("Local Upload Error:", err);
       throw new Error(
-        error.message || "Gagal menyimpan gambar ke penyimpanan lokal"
+        err.message || "Gagal menyimpan gambar ke penyimpanan lokal"
       );
     }
   },
@@ -81,12 +80,32 @@ export const imageService = {
   getImages: async (postId?: string) => {
     return prisma.image.findMany({
       where: postId ? { postId } : undefined,
-      orderBy: { order: "asc" as const },
+      orderBy: { order: "asc" },
+      include: {
+        uploadedBy: {
+          select: {
+            id: true,
+            fullname: true,
+            avatar: true,
+          },
+        },
+      },
     });
   },
 
   getImageById: async (id: string) => {
-    return prisma.image.findUnique({ where: { id } });
+    return prisma.image.findUnique({
+      where: { id },
+      include: {
+        uploadedBy: {
+          select: {
+            id: true,
+            fullname: true,
+            avatar: true,
+          },
+        },
+      },
+    });
   },
 
   updateImage: async (

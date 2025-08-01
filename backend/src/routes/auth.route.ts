@@ -8,6 +8,7 @@ import {
   resetPassword,
   refreshToken,
   logout,
+  setPassword,
 } from "../controllers/auth.controller";
 import { authenticate } from "../middleware/auth.middleware";
 
@@ -170,6 +171,8 @@ router.get(
     session: false,
   })
 );
+
+router.post("/set-password", authenticate, setPassword);
 
 /**
  * @swagger

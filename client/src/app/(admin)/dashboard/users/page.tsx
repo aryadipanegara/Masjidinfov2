@@ -1,9 +1,16 @@
 "use client";
 
-import type React from "react";
-
-import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
+import { useState } from "react";
+import {
+  Search,
+  MoreHorizontal,
+  Shield,
+  Ban,
+  RotateCcw,
+  Key,
+  Mail,
+  Calendar,
+} from "lucide-react";
 import {
   Card,
   CardContent,
@@ -11,7 +18,10 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Table,
   TableBody,
@@ -20,8 +30,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -31,322 +39,580 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination";
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
-  SearchIcon,
-  MoreHorizontalIcon,
-  UserPlusIcon,
-  FilterIcon,
-  EyeIcon,
-  EditIcon,
-  Trash2Icon,
-} from "lucide-react";
-import { UserService } from "@/service/users.service";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Skeleton } from "@/components/ui/skeleton";
+import useSWR from "swr";
 import notify from "@/lib/notify";
 import handleErrorResponse from "@/utils/handleErrorResponse";
-import type { UserDetail } from "@/types/user.types";
-import UserDetailModal from "./components/user-details-modal";
-import UserEditModal from "./components/user-form-modal";
+import { UserService } from "@/service/users.service";
 
-export default function UsersPage() {
-  const [users, setUsers] = useState<UserDetail[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(10);
-  const [totalUsers, setTotalUsers] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
+interface User {
+  id: string;
+  email: string;
+  fullname: string;
+  avatar?: string;
+  role: "SUPER_ADMIN" | "ADMIN" | "EDITOR" | "VIEWER";
+  isVerified: boolean;
+  isBanned: boolean;
+  bannedReason?: string;
+  createdAt: string;
+  updatedAt: string;
+}
 
-  // Modal states
-  const [selectedUser, setSelectedUser] = useState<UserDetail | null>(null);
-  const [detailModalOpen, setDetailModalOpen] = useState(false);
-  const [editModalOpen, setEditModalOpen] = useState(false);
+const USER_ROLES = [
+  { value: "all", label: "Semua Role" },
+  { value: "SUPER_ADMIN", label: "Super Admin" },
+  { value: "ADMIN", label: "Admin" },
+  { value: "EDITOR", label: "Editor" },
+  { value: "VIEWER", label: "Viewer" },
+];
 
-  const fetchUsers = async () => {
-    setLoading(true);
+const USER_STATUS = [
+  { value: "all", label: "Semua Status" },
+  { value: "verified", label: "Terverifikasi" },
+  { value: "unverified", label: "Belum Verifikasi" },
+  { value: "banned", label: "Dibanned" },
+];
+
+const ROLE_OPTIONS = [
+  { value: "SUPER_ADMIN", label: "Super Admin" },
+  { value: "ADMIN", label: "Admin" },
+  { value: "EDITOR", label: "Editor" },
+  { value: "VIEWER", label: "Viewer" },
+];
+
+// SWR fetcher function
+const fetchUsers = async (url: string) => {
+  const [, searchQuery, selectedRole, selectedStatus, currentPage] =
+    url.split("|");
+
+  const params: any = {
+    page: Number.parseInt(currentPage) || 1,
+    limit: 10,
+  };
+
+  if (searchQuery && searchQuery !== "undefined") params.search = searchQuery;
+
+  const response = await UserService.getUsers(params);
+  return response.data;
+};
+
+export default function UsersManagementPage() {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedRole, setSelectedRole] = useState("all");
+  const [selectedStatus, setSelectedStatus] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [isRoleDialogOpen, setIsRoleDialogOpen] = useState(false);
+  const [isBanDialogOpen, setIsBanDialogOpen] = useState(false);
+  const [newRole, setNewRole] = useState<string>("");
+  const [banReason, setBanReason] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Create SWR key
+  const swrKey = `users|${searchQuery}|${selectedRole}|${selectedStatus}|${currentPage}`;
+
+  // SWR hook for users data
+  const {
+    data: usersData,
+    error,
+    isLoading,
+    mutate: mutateUsers,
+  } = useSWR(swrKey, fetchUsers, {
+    revalidateOnFocus: false,
+  });
+
+  const users = usersData?.data || [];
+  const totalPages = usersData?.pagination?.totalPages || 1;
+  const totalItems = usersData?.pagination?.totalItems || 0;
+
+  const handleSearch = (value: string) => {
+    setSearchQuery(value);
+    setCurrentPage(1);
+  };
+
+  const handleRoleFilter = (value: string) => {
+    setSelectedRole(value);
+    setCurrentPage(1);
+  };
+
+  const handleStatusFilter = (value: string) => {
+    setSelectedStatus(value);
+    setCurrentPage(1);
+  };
+
+  const handleChangeRole = (user: User) => {
+    setSelectedUser(user);
+    setNewRole(user.role);
+    setIsRoleDialogOpen(true);
+  };
+
+  const handleBanUser = (user: User) => {
+    setSelectedUser(user);
+    setBanReason("");
+    setIsBanDialogOpen(true);
+  };
+
+  const handleSubmitRoleChange = async () => {
+    if (!selectedUser || !newRole) return;
+
+    setIsSubmitting(true);
+    const toastId = notify.loading("Mengubah role pengguna...");
+
     try {
-      const res = await UserService.getUsers({ page, limit, search });
-      setUsers(res.data.data);
-      setTotalUsers(res.data.paginations.totalItems);
-      setTotalPages(res.data.paginations.totalPages);
-    } catch (err: unknown) {
-      handleErrorResponse(err);
+      await UserService.updateUser(selectedUser.id, { role: newRole });
+      notify.success("Role pengguna berhasil diubah!", { id: toastId });
+
+      mutateUsers();
+      setIsRoleDialogOpen(false);
+      setSelectedUser(null);
+      setNewRole("");
+    } catch (error) {
+      handleErrorResponse(error, toastId);
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
   };
 
-  useEffect(() => {
-    fetchUsers();
-  }, [page, limit, search]);
+  const handleSubmitBan = async () => {
+    if (!selectedUser) return;
 
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearch(e.target.value);
-    setPage(1);
-  };
+    setIsSubmitting(true);
+    const toastId = notify.loading(
+      selectedUser.isBanned ? "Membatalkan ban..." : "Membanned pengguna..."
+    );
 
-  const handlePreviousPage = () => {
-    setPage((prev) => Math.max(1, prev - 1));
-  };
-
-  const handleNextPage = () => {
-    setPage((prev) => Math.min(totalPages, prev + 1));
-  };
-
-  const handleViewUser = (user: UserDetail) => {
-    setSelectedUser(user);
-    setDetailModalOpen(true);
-  };
-
-  const handleEditUser = (user: UserDetail) => {
-    setSelectedUser(user);
-    setEditModalOpen(true);
-  };
-
-  const handleDeleteUser = async (userId: string) => {
-    if (!confirm("Apakah Anda yakin ingin menghapus user ini?")) {
-      return;
-    }
-    const loadingToastId = notify.loading("Menghapus user...");
     try {
-      await UserService.deleteUser(userId);
-      notify.dismiss(loadingToastId);
-      notify.success("User berhasil dihapus!");
-      fetchUsers();
-    } catch (err: unknown) {
-      handleErrorResponse(err, loadingToastId);
+      if (selectedUser.isBanned) {
+        await UserService.updateUser(selectedUser.id, {
+          isBanned: false,
+          bannedReason: null,
+        });
+        notify.success("Ban pengguna berhasil dibatalkan!", { id: toastId });
+      } else {
+        await UserService.updateUser(selectedUser.id, {
+          isBanned: true,
+          bannedReason: banReason.trim() || "Melanggar ketentuan",
+        });
+        notify.success("Pengguna berhasil dibanned!", { id: toastId });
+      }
+
+      mutateUsers();
+      setIsBanDialogOpen(false);
+      setSelectedUser(null);
+      setBanReason("");
+    } catch (error) {
+      handleErrorResponse(error, toastId);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const handleUserUpdated = () => {
-    fetchUsers(); // Refresh the user list after update
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString("id-ID", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
   };
 
-  const getRoleColor = (role: string) => {
-    switch (role) {
-      case "SUPER_ADMIN":
-        return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300";
-      case "ADMIN":
-        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
-      case "EDITOR":
-        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
-      case "VIEWER":
-        return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300";
-      default:
-        return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300";
+  const getRoleBadge = (role: string) => {
+    const variants: Record<
+      string,
+      {
+        variant: "default" | "secondary" | "destructive" | "outline";
+        color: string;
+      }
+    > = {
+      SUPER_ADMIN: { variant: "destructive", color: "bg-red-100 text-red-800" },
+      ADMIN: { variant: "default", color: "bg-blue-100 text-blue-800" },
+      EDITOR: { variant: "secondary", color: "bg-green-100 text-green-800" },
+      VIEWER: { variant: "outline", color: "bg-gray-100 text-gray-800" },
+    };
+    const config = variants[role] || variants.VIEWER;
+    return <Badge className={config.color}>{role}</Badge>;
+  };
+
+  const getStatusBadges = (user: User) => {
+    const badges = [];
+
+    if (user.isBanned) {
+      badges.push(
+        <Badge key="banned" variant="destructive">
+          Banned
+        </Badge>
+      );
     }
+
+    if (user.isVerified) {
+      badges.push(
+        <Badge
+          key="verified"
+          variant="default"
+          className="bg-green-100 text-green-800"
+        >
+          Verified
+        </Badge>
+      );
+    } else {
+      badges.push(
+        <Badge key="unverified" variant="outline">
+          Unverified
+        </Badge>
+      );
+    }
+
+    return badges;
   };
 
-  return (
-    <>
+  if (error) {
+    return (
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-3xl font-bold tracking-tight">Users</h2>
-            <p className="text-muted-foreground">
-              Kelola semua pengguna dalam sistem
-            </p>
-          </div>
-          <div className="flex items-center space-x-2">
-            <Button>
-              <UserPlusIcon className="mr-2 h-4 w-4" />
-              Add User
-            </Button>
-          </div>
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">
+            Manajemen Pengguna
+          </h2>
+          <p className="text-muted-foreground">
+            Kelola pengguna, role, dan status akun
+          </p>
         </div>
-
         <Card>
-          <CardHeader>
-            <CardTitle>User Management</CardTitle>
-            <CardDescription>
-              Total {totalUsers.toLocaleString()} pengguna terdaftar dalam
-              sistem
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center space-x-2">
-                <div className="relative">
-                  <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    type="search"
-                    placeholder="Cari pengguna..."
-                    className="pl-9 w-80"
-                    value={search}
-                    onChange={handleSearchChange}
-                  />
-                </div>
-                <Button variant="outline" size="sm">
-                  <FilterIcon className="mr-2 h-4 w-4" />
-                  Filter
-                </Button>
-              </div>
+          <CardContent className="p-6">
+            <div className="text-center text-red-600">
+              Error loading users. Please try again.
             </div>
-
-            {loading ? (
-              <div className="text-center py-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-                <p className="text-muted-foreground">Memuat data pengguna...</p>
-              </div>
-            ) : users.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                <UserPlusIcon className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>Tidak ada pengguna ditemukan.</p>
-              </div>
-            ) : (
-              <>
-                <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>User</TableHead>
-                        <TableHead>Role</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Joined</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {users.map((user) => (
-                        <TableRow key={user.id}>
-                          <TableCell>
-                            <div className="flex items-center space-x-3">
-                              <Avatar className="h-9 w-9">
-                                <AvatarImage
-                                  src={user.avatar || ""}
-                                  alt={user.fullname}
-                                />
-                                <AvatarFallback>
-                                  {user.fullname
-                                    .split(" ")
-                                    .map((n) => n[0])
-                                    .join("")
-                                    .toUpperCase()}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div>
-                                <div className="font-medium">
-                                  {user.fullname}
-                                </div>
-                                <div className="text-sm text-muted-foreground">
-                                  {user.email}
-                                </div>
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge className={getRoleColor(user.role)}>
-                              {user.role}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={
-                                user.isVerified ? "default" : "secondary"
-                              }
-                            >
-                              {user.isVerified ? "Verified" : "Unverified"}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            {new Date(user.createdAt).toLocaleDateString()}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" className="h-8 w-8 p-0">
-                                  <span className="sr-only">Open menu</span>
-                                  <MoreHorizontalIcon className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                <DropdownMenuItem
-                                  onClick={() =>
-                                    navigator.clipboard.writeText(user.id)
-                                  }
-                                >
-                                  Copy user ID
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  onClick={() => handleViewUser(user)}
-                                >
-                                  <EyeIcon className="mr-2 h-4 w-4" />
-                                  View details
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => handleEditUser(user)}
-                                >
-                                  <EditIcon className="mr-2 h-4 w-4" />
-                                  Edit user
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => handleDeleteUser(user.id)}
-                                  className="text-red-600"
-                                >
-                                  <Trash2Icon className="mr-2 h-4 w-4" />
-                                  Delete user
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-
-                <div className="flex items-center justify-between mt-4">
-                  <p className="text-sm text-muted-foreground">
-                    Showing {(page - 1) * limit + 1} to{" "}
-                    {Math.min(page * limit, totalUsers)} of {totalUsers} users
-                  </p>
-                  <Pagination>
-                    <PaginationContent>
-                      <PaginationItem>
-                        <PaginationPrevious
-                          onClick={handlePreviousPage}
-                          isActive={page === 1}
-                        />
-                      </PaginationItem>
-                      <PaginationItem>
-                        <Button variant="outline" disabled>
-                          Page {page} of {totalPages}
-                        </Button>
-                      </PaginationItem>
-                      <PaginationItem>
-                        <PaginationNext
-                          onClick={handleNextPage}
-                          isActive={page >= totalPages}
-                        />
-                      </PaginationItem>
-                    </PaginationContent>
-                  </Pagination>
-                </div>
-              </>
-            )}
           </CardContent>
         </Card>
       </div>
+    );
+  }
 
-      {/* Modals */}
-      <UserDetailModal
-        user={selectedUser}
-        open={detailModalOpen}
-        onOpenChange={setDetailModalOpen}
-      />
-      <UserEditModal
-        user={selectedUser}
-        open={editModalOpen}
-        onOpenChange={setEditModalOpen}
-        onUserUpdated={handleUserUpdated}
-      />
-    </>
+  return (
+    <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
+      <div>
+        <h2 className="text-3xl font-bold tracking-tight">
+          Manajemen Pengguna
+        </h2>
+        <p className="text-muted-foreground">
+          Kelola pengguna, role, dan status akun
+        </p>
+      </div>
+
+      {/* Filters and Search */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Filter & Pencarian</CardTitle>
+          <CardDescription>
+            Cari dan filter pengguna berdasarkan role dan status
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Cari berdasarkan nama atau email..."
+                  value={searchQuery}
+                  onChange={(e) => handleSearch(e.target.value)}
+                  className="pl-8"
+                />
+              </div>
+            </div>
+            <Select value={selectedRole} onValueChange={handleRoleFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Pilih Role" />
+              </SelectTrigger>
+              <SelectContent>
+                {USER_ROLES.map((role) => (
+                  <SelectItem key={role.value} value={role.value}>
+                    {role.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Select value={selectedStatus} onValueChange={handleStatusFilter}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Pilih Status" />
+              </SelectTrigger>
+              <SelectContent>
+                {USER_STATUS.map((status) => (
+                  <SelectItem key={status.value} value={status.value}>
+                    {status.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Users Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Daftar Pengguna ({totalItems} total)</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="space-y-4">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="flex items-center space-x-4">
+                  <Skeleton className="h-12 w-12 rounded-full" />
+                  <div className="space-y-2 flex-1">
+                    <Skeleton className="h-4 w-[200px]" />
+                    <Skeleton className="h-4 w-[150px]" />
+                  </div>
+                  <Skeleton className="h-6 w-[80px]" />
+                  <Skeleton className="h-8 w-8" />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Pengguna</TableHead>
+                    <TableHead>Role</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Bergabung</TableHead>
+                    <TableHead className="text-right">Aksi</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {users.map((user: User) => (
+                    <TableRow key={user.id}>
+                      <TableCell>
+                        <div className="flex items-center space-x-3">
+                          <Avatar className="h-10 w-10">
+                            <AvatarImage
+                              src={user.avatar || "/placeholder.svg"}
+                            />
+                            <AvatarFallback>
+                              {user.fullname
+                                .split(" ")
+                                .map((n) => n[0])
+                                .join("")}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="font-medium">{user.fullname}</p>
+                            <p className="text-sm text-muted-foreground flex items-center">
+                              <Mail className="h-3 w-3 mr-1" />
+                              {user.email}
+                            </p>
+                            {user.isBanned && user.bannedReason && (
+                              <p className="text-xs text-red-600 mt-1">
+                                Alasan: {user.bannedReason}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>{getRoleBadge(user.role)}</TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {getStatusBadges(user)}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        <div className="flex items-center">
+                          <Calendar className="h-3 w-3 mr-1" />
+                          {formatDate(user.createdAt)}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" className="h-8 w-8 p-0">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Aksi</DropdownMenuLabel>
+                            <DropdownMenuItem
+                              onClick={() => handleChangeRole(user)}
+                            >
+                              <Shield className="mr-2 h-4 w-4" />
+                              Ubah Role
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleBanUser(user)}
+                            >
+                              {user.isBanned ? (
+                                <>
+                                  <RotateCcw className="mr-2 h-4 w-4 text-green-600" />
+                                  Unban
+                                </>
+                              ) : (
+                                <>
+                                  <Ban className="mr-2 h-4 w-4 text-red-600" />
+                                  Ban
+                                </>
+                              )}
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem>
+                              <Key className="mr-2 h-4 w-4" />
+                              Reset Password
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between space-x-2 py-4">
+              <div className="text-sm text-muted-foreground">
+                Halaman {currentPage} dari {totalPages}
+              </div>
+              <div className="flex space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(currentPage - 1)}
+                  disabled={currentPage === 1}
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(currentPage + 1)}
+                  disabled={currentPage === totalPages}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Change Role Dialog */}
+      <Dialog open={isRoleDialogOpen} onOpenChange={setIsRoleDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Ubah Role Pengguna</DialogTitle>
+            <DialogDescription>
+              Ubah role untuk {selectedUser?.fullname} ({selectedUser?.email})
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Role Baru</Label>
+              <Select value={newRole} onValueChange={setNewRole}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ROLE_OPTIONS.map((role) => (
+                    <SelectItem key={role.value} value={role.value}>
+                      {role.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsRoleDialogOpen(false)}
+              disabled={isSubmitting}
+            >
+              Batal
+            </Button>
+            <Button
+              onClick={handleSubmitRoleChange}
+              disabled={isSubmitting || !newRole}
+            >
+              {isSubmitting ? "Mengubah..." : "Ubah Role"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Ban/Unban Dialog */}
+      <AlertDialog open={isBanDialogOpen} onOpenChange={setIsBanDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {selectedUser?.isBanned
+                ? "Batalkan Ban Pengguna"
+                : "Ban Pengguna"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {selectedUser?.isBanned
+                ? `Apakah Anda yakin ingin membatalkan ban untuk ${selectedUser?.fullname}?`
+                : `Apakah Anda yakin ingin memban ${selectedUser?.fullname}?`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {!selectedUser?.isBanned && (
+            <div className="space-y-2">
+              <Label htmlFor="banReason">Alasan Ban</Label>
+              <Textarea
+                id="banReason"
+                value={banReason}
+                onChange={(e) => setBanReason(e.target.value)}
+                placeholder="Masukkan alasan ban (opsional)"
+                rows={3}
+              />
+            </div>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isSubmitting}>Batal</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleSubmitBan}
+              disabled={isSubmitting}
+              className={
+                selectedUser?.isBanned
+                  ? "bg-green-600 hover:bg-green-700"
+                  : "bg-red-600 hover:bg-red-700"
+              }
+            >
+              {isSubmitting
+                ? selectedUser?.isBanned
+                  ? "Membatalkan..."
+                  : "Membanning..."
+                : selectedUser?.isBanned
+                ? "Batalkan Ban"
+                : "Ban Pengguna"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
   );
 }

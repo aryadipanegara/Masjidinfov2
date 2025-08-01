@@ -9,53 +9,61 @@ import type {
 } from "@/types/image.types";
 
 export const ImageService = {
-  upload: async (file: File): Promise<{ data: ImageUploadResponse }> => {
+  upload: async (
+    file: File,
+    opts?: { altText?: string; caption?: string; postId?: string }
+  ): Promise<ImageUploadResponse> => {
     const formData = new FormData();
-
     formData.append("file", file);
+    if (opts?.altText) formData.append("altText", opts.altText);
+    if (opts?.caption) formData.append("caption", opts.caption);
+    if (opts?.postId) formData.append("postId", opts.postId);
 
-    const response = await AxiosInstance.post<ImageUploadResponse>(
+    const { data } = await AxiosInstance.post<ImageUploadResponse>(
       "/images/upload",
       formData,
       {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
+        headers: { "Content-Type": "multipart/form-data" },
+        withCredentials: true,
       }
     );
-    return response;
+    return data;
   },
 
-  getAll: async (postId?: string): Promise<{ data: ImageListResponse }> => {
+  getAll: async (postId?: string): Promise<ImageListResponse> => {
     const params = postId ? { postId } : {};
-    const response = await AxiosInstance.get<ImageListResponse>("/images", {
+    const { data } = await AxiosInstance.get<ImageListResponse>("/images", {
       params,
+      withCredentials: true,
     });
-    return response;
+    return data;
   },
 
-  getById: async (id: string): Promise<{ data: ImageDetailResponse }> => {
-    const response = await AxiosInstance.get<ImageDetailResponse>(
-      `/images/${id}`
+  getById: async (id: string): Promise<ImageDetailResponse> => {
+    const { data } = await AxiosInstance.get<ImageDetailResponse>(
+      `/images/${id}`,
+      { withCredentials: true }
     );
-    return response;
+    return data;
   },
 
   update: async (
     id: string,
-    data: UpdateImagePayload
-  ): Promise<{ data: ImageUpdateResponse }> => {
-    const response = await AxiosInstance.put<ImageUpdateResponse>(
+    payload: UpdateImagePayload
+  ): Promise<ImageUpdateResponse> => {
+    const { data } = await AxiosInstance.put<ImageUpdateResponse>(
       `/images/${id}`,
-      data
+      payload,
+      { withCredentials: true }
     );
-    return response;
+    return data;
   },
 
-  delete: async (id: string): Promise<{ data: ImageDeleteResponse }> => {
-    const response = await AxiosInstance.delete<ImageDeleteResponse>(
-      `/images/${id}`
+  delete: async (id: string): Promise<ImageDeleteResponse> => {
+    const { data } = await AxiosInstance.delete<ImageDeleteResponse>(
+      `/images/${id}`,
+      { withCredentials: true }
     );
-    return response;
+    return data;
   },
 };

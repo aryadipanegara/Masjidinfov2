@@ -37,6 +37,11 @@ enum OTPPurpose {
   CHANGE_EMAIL
 }
 
+enum PostStatus {
+  DRAFT
+  PUBLISHED
+}
+
 // ---------------- MODELS ----------------
 
 model User {
@@ -65,6 +70,7 @@ model User {
   readlists    ReadList[]
   comments     Comment[]               @relation("UserComments")
   commentLikes CommentLike[]        @relation("UserCommentLikes")
+  uploadedImages   Image[]          @relation("UserImages")
 
   @@index([email])
   @@index([hasGoogleAccount])
@@ -142,6 +148,7 @@ model Post {
   content     String        @db.Text @map("content")
   coverImage  String?       @map("cover_image")
   tags        String[]      @map("tags")
+  status      PostStatus    @default(DRAFT) @map("status")
   publishedAt DateTime      @default(now()) @map("published_at")
   updatedAt   DateTime      @updatedAt @map("updated_at")
   isDeleted   Boolean       @default(false) @map("is_deleted")
@@ -193,8 +200,12 @@ model Image {
   postId     String?  @map("post_id")
   post       Post?    @relation(fields: [postId], references: [id], onDelete: SetNull)
 
+  uploadedById String?   @map("uploaded_by_id")
+  uploadedBy   User?    @relation("UserImages", fields: [uploadedById], references: [id], onDelete: SetNull)
+
   @@map("image")
 }
+
 
 model Masjid {
   id            String   @id @default(ulid())

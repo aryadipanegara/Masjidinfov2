@@ -123,6 +123,89 @@ export const commentService = {
     };
   },
 
+  getAllComments: async (
+    page: number = 1,
+    limit: number = 10,
+    sort: "recent" | "popular" = "recent",
+    search?: string
+  ) => {
+    const skip = (page - 1) * limit;
+
+    // Query utama dengan pencarian opsional
+    const allComments = await prisma.comment.findMany({
+      where: search
+        ? {
+            content: {
+              contains: search,
+              mode: "insensitive",
+            },
+          }
+        : {},
+      include: {
+        author: {
+          select: {
+            id: true,
+            fullname: true,
+            avatar: true,
+          },
+        },
+        post: {
+          select: {
+            id: true,
+            title: true,
+            slug: true,
+          },
+        },
+        _count: {
+          select: {
+            likes: true,
+            replies: true,
+          },
+        },
+      },
+      orderBy:
+        sort === "recent"
+          ? { createdAt: "desc" }
+          : {
+              likes: {
+                _count: "desc",
+              },
+            },
+      skip,
+      take: limit,
+    });
+
+    const totalItems = await prisma.comment.count({
+      where: search
+        ? {
+            content: {
+              contains: search,
+              mode: "insensitive",
+            },
+          }
+        : {},
+    });
+
+    // Format output agar konsisten
+    const enriched = allComments.map((c) => ({
+      ...c,
+      totalLikes: c._count.likes,
+      totalReplies: c._count.replies,
+    }));
+
+    return {
+      data: enriched,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(totalItems / limit),
+        totalItems,
+        itemsPerPage: limit,
+        hasNextPage: skip + allComments.length < totalItems,
+        hasPrevPage: page > 1,
+      },
+    };
+  },
+
   // Update komentar
   updateComment: async (commentId: string, userId: string, content: string) => {
     // Cek kepemilikan

@@ -3,6 +3,7 @@ import { authenticate } from "../middleware/auth.middleware";
 import {
   createComment,
   deleteComment,
+  getAllComments,
   getCommentsByPost,
   likeComment,
   unlikeComment,
@@ -11,6 +12,7 @@ import {
 
 const router = Router();
 
+router.get("/", getAllComments);
 router.get("/:postId/comments", getCommentsByPost);
 
 /**

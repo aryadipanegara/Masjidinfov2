@@ -1,73 +1,45 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { PostService } from "@/service/posts.service";
 import { MapPinIcon, BookOpenIcon } from "lucide-react";
 import useSWR from "swr";
 import type { Post } from "@/types/posts.types";
 import Image from "next/image";
 
-const tabs = [
-  { id: "all", label: "Semua", active: true },
-  { id: "masjid", label: "Masjid", active: false },
-  { id: "artikel", label: "Artikel", active: false },
-];
-
 export function PopularSection() {
-  const [activeTab, setActiveTab] = useState("all");
-
-  const { data: posts, isLoading } = useSWR(
-    `/posts/popular?type=${activeTab}`,
+  const { data: posts, isLoading } = useSWR<Post[]>(
+    "/posts/popular",
     async () => {
-      const params = activeTab === "all" ? {} : { type: activeTab };
-      const response = await PostService.getAll({ ...params, limit: 8 });
+      const response = await PostService.getAll({ limit: 8 });
       return response.data.data;
     }
   );
 
+  // Fungsi untuk ikon berdasarkan tipe
   const getPostTypeIcon = (type: string) => {
     return type === "masjid" ? MapPinIcon : BookOpenIcon;
   };
 
+  // Fungsi untuk warna badge
   const getPostTypeColor = (type: string) => {
     return type === "masjid"
       ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
       : "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
   };
 
-  const backendBaseUrl = process.env.NEXT_PUBLIC_BACKEND_BASE_URL || "";
-
   return (
     <section>
       <div className="container mx-auto">
-        {/* Tabs */}
-        <div className="flex space-x-2 mb-6">
-          {tabs.map((tab) => (
-            <Button
-              key={tab.id}
-              variant={activeTab === tab.id ? "default" : "outline"}
-              size="sm"
-              onClick={() => setActiveTab(tab.id)}
-              className="rounded-full"
-            >
-              {tab.label}
-            </Button>
-          ))}
-        </div>
-
-        {/* Carousel Container */}
         <div className="relative">
           <div
-            className="flex gap-4 overflow-x-auto scrollbar-hide pb-4"
+            className="flex gap-4 overflow-x-auto pb-4 hide-scrollbar"
             style={{
               scrollbarWidth: "none",
               msOverflowStyle: "none",
-              WebkitOverflowScrolling: "touch",
             }}
           >
             {isLoading
@@ -92,11 +64,11 @@ export function PopularSection() {
                         <div className="relative aspect-[2/3] overflow-hidden">
                           {post.coverImage && (
                             <Image
-                              src={`${backendBaseUrl}${post.coverImage}`}
+                              src={`${post.coverImage}`}
                               alt={post.title}
                               fill
                               className="object-cover group-hover:scale-105 transition-transform duration-300"
-                              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                              sizes="(max-width: 768px) 80vw, (max-width: 1024px) 50vw, 25vw"
                               priority={false}
                             />
                           )}
@@ -130,12 +102,9 @@ export function PopularSection() {
           </div>
         </div>
 
+        {/* Sembunyikan scrollbar */}
         <style jsx>{`
-          .scrollbar-hide {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-          }
-          .scrollbar-hide::-webkit-scrollbar {
+          .hide-scrollbar::-webkit-scrollbar {
             display: none;
           }
         `}</style>

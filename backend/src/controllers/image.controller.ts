@@ -38,6 +38,13 @@ export const uploadImage = async (req: Request, res: Response) => {
   try {
     const file = req.file as Express.Multer.File | undefined;
     const { altText, caption, postId } = req.body;
+    const userId = (req as any).user?.userId;
+
+    if (!userId) {
+      return res
+        .status(401)
+        .json({ error: "Unauthorized: userId tidak ditemukan." });
+    }
 
     if (!file) {
       return res.status(400).json({
@@ -52,7 +59,8 @@ export const uploadImage = async (req: Request, res: Response) => {
       file.mimetype,
       altText,
       caption,
-      postId
+      postId,
+      userId
     );
 
     res.status(201).json({
@@ -72,7 +80,6 @@ export const uploadImage = async (req: Request, res: Response) => {
       return res.status(400).json({ error: error.message });
     }
 
-    // Tangani error dari service/image.service.ts
     if (error.message && error.message.includes("Tipe file tidak didukung")) {
       return res.status(400).json({ error: error.message });
     }
@@ -85,7 +92,6 @@ export const uploadImage = async (req: Request, res: Response) => {
       }
     }
 
-    // Error umum
     res.status(500).json({ error: error.message || "Gagal mengupload gambar" });
   }
 };

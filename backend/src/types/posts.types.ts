@@ -9,4 +9,5 @@ export type CreatePostPayload = {
   categoryIds?: string[];
   imageIds?: string[];
   allImageConnections?: string[] | undefined;
+  status?: "DRAFT" | "PUBLISHED";
 };

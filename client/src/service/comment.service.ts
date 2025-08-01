@@ -6,6 +6,12 @@ export const CommentService = {
     params?: { page?: number; limit?: number; sort?: "recent" | "popular" }
   ) => AxiosInstance.get(`/comments/${postId}/comments`, { params }),
 
+  getAll: (params?: {
+    page?: number;
+    limit?: number;
+    sort?: "recent" | "popular";
+  }) => AxiosInstance.get("/comments", { params }),
+
   create: (postId: string, content: string, parentId?: string) =>
     AxiosInstance.post(`/comments/${postId}/comments`, { content, parentId }),
 

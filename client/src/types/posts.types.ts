@@ -1,4 +1,12 @@
-export type PostType = "masjid" | "artikel";
+export type PostType =
+  | "masjid"
+  | "sejarah"
+  | "kisah"
+  | "ziarah"
+  | "refleksi"
+  | "tradisi";
+
+export type PostStatus = "DRAFT" | "PUBLISHED";
 
 export interface Post {
   id: string;
@@ -9,6 +17,7 @@ export interface Post {
   tags?: string[];
   type: PostType;
   coverImage?: string;
+  status: PostStatus;
   author: {
     id: string;
     fullname: string;
@@ -30,6 +39,7 @@ export interface Post {
   publishedAt: string;
   createdAt: string;
   updatedAt: string;
+  isDeleted?: boolean;
 }
 
 export interface Pagination {
@@ -54,11 +64,15 @@ export interface CreatePostPayload {
   coverImage?: string;
   categoryIds?: string[];
   imageIds?: string[];
+  status: PostStatus;
+  isDeleted?: boolean;
 }
 
 export interface PostCategory {
+  id: string;
   categoryId: string;
   category: { name: string };
+  name: string;
 }
 
 export type UpdatePostPayload = Partial<CreatePostPayload>;

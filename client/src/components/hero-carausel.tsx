@@ -13,8 +13,6 @@ import { PostService } from "@/service/posts.service";
 import type { Post } from "@/types/posts.types";
 import Image from "next/image";
 
-const backendBaseUrl = process.env.NEXT_PUBLIC_BACKEND_BASE_URL || "";
-
 export function HeroCarousel() {
   const { data: posts, isLoading } = useSWR("/posts?limit=5", async () => {
     const response = await PostService.getAll({ limit: 5 });
@@ -43,7 +41,7 @@ export function HeroCarousel() {
               <div className="relative flex items-center w-full h-[420px] rounded-xl overflow-hidden bg-black">
                 {/* Background Image */}
                 <Image
-                  src={`${backendBaseUrl}${post.coverImage}`}
+                  src={`${post.coverImage}`}
                   alt={post.title}
                   fill
                   className="absolute inset-0 object-cover"

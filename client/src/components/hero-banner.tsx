@@ -14,7 +14,6 @@ import {
   BookOpenIcon,
   CalendarIcon,
   BellIcon,
-  Star,
 } from "lucide-react";
 import useSWR from "swr";
 import { PostService } from "@/service/posts.service";
@@ -125,7 +124,6 @@ export function HeroBanner() {
   }
 
   const currentPost = featuredPosts?.[currentSlide];
-  const backendBaseUrl = process.env.NEXT_PUBLIC_BACKEND_BASE_URL || "";
 
   return (
     <section className="py-4 sm:py-6 lg:py-8 bg-white">
@@ -148,7 +146,7 @@ export function HeroBanner() {
                       <Image
                         src={
                           currentPost.coverImage
-                            ? `${backendBaseUrl}${currentPost.coverImage}`
+                            ? `${currentPost.coverImage}`
                             : "/placeholder.svg?height=400&width=1200"
                         }
                         alt={currentPost.title}

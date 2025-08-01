@@ -1,8 +1,5 @@
 "use client";
-
-import type React from "react";
-import { useRouter } from "next/navigation";
-import { AdminSidebar } from "@/components/admin-sidebar";
+import { useEffect, type ReactNode } from "react";
 import {
   SidebarInset,
   SidebarProvider,
@@ -17,14 +14,39 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import notify from "@/lib/notify";
+import { AdminSidebar } from "@/components/admin-sidebar";
+import { useRouter } from "next/navigation";
+import { useAuth } from "../providers";
 
-export default function AdminLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function AdminLayout({ children }: { children: ReactNode }) {
+  const { user, loading } = useAuth();
   const router = useRouter();
+
+  useEffect(() => {
+    if (!loading) {
+      if (!user) {
+        router.push("/");
+        return;
+      }
+
+      if (user.role !== "SUPER_ADMIN") {
+        router.push("/");
+        return;
+      }
+    }
+  }, [user, loading, router]);
+
+  if (loading) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center">
+        <p>Loading...</p>
+      </div>
+    );
+  }
+
+  if (!user || user.role !== "SUPER_ADMIN") {
+    return null;
+  }
 
   return (
     <SidebarProvider>

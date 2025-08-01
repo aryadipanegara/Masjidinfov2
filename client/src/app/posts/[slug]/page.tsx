@@ -49,12 +49,12 @@ import { PostService } from "@/service/posts.service";
 import { ImageService } from "@/service/image.service";
 import { fixImageUrlsInHtml } from "@/utils/imageUrlHelper";
 import useSWR from "swr";
-import { TipTapEditor } from "@/components/tiptap-editor";
 import { useAuth } from "@/app/providers";
 import { useReaderControls } from "@/hooks/use-reader-controls";
 import { CommentSection } from "@/components/comment/comment-section";
 import { BookmarkService } from "@/service/bookmark.service";
 import Image from "next/image";
+import TipTapEditor from "@/components/tiptap-editor/index";
 
 interface PostDetailPageProps {
   params: {
@@ -183,11 +183,13 @@ export default function PostDetailPage({ params }: PostDetailPageProps) {
   ) => {
     const file = event.target.files?.[0];
     if (!file) return;
+
     const loadingToastId = notify.loading("Mengupload cover image...");
     try {
-      const response = await ImageService.upload(file);
-      const uploadedImageData = response.data.data;
-      handleFieldChange("coverImage", uploadedImageData.url);
+      const { data: uploadedImage } = await ImageService.upload(file);
+
+      handleFieldChange("coverImage", uploadedImage.url);
+
       notify.dismiss(loadingToastId);
       notify.success("Cover image berhasil diupload!");
     } catch (err) {
@@ -198,11 +200,12 @@ export default function PostDetailPage({ params }: PostDetailPageProps) {
   const handleContentImageUpload = async (file: File): Promise<string> => {
     const loadingToastId = notify.loading("Mengupload gambar konten...");
     try {
-      const response = await ImageService.upload(file);
-      const uploadedImageUrl = response.data.data.url;
+      const { data: uploadedImage } = await ImageService.upload(file);
+
       notify.dismiss(loadingToastId);
       notify.success("Gambar konten berhasil diupload!");
-      return uploadedImageUrl;
+
+      return uploadedImage.url;
     } catch (err) {
       handleErrorResponse(err, loadingToastId);
       throw err;
@@ -358,7 +361,6 @@ export default function PostDetailPage({ params }: PostDetailPageProps) {
   }
 
   const TypeIcon = getPostTypeIcon(post.type);
-  const backendBaseUrl = process.env.NEXT_PUBLIC_BACKEND_BASE_URL || "";
 
   return (
     <div className="min-h-screen bg-white">
@@ -419,7 +421,7 @@ export default function PostDetailPage({ params }: PostDetailPageProps) {
                   />
                   {editData.coverImage && (
                     <Image
-                      src={`${backendBaseUrl}${editData.coverImage}`}
+                      src={`${editData.coverImage}`}
                       alt="Cover preview"
                       width={300}
                       height={225}
@@ -431,7 +433,7 @@ export default function PostDetailPage({ params }: PostDetailPageProps) {
               ) : (
                 post.coverImage && (
                   <Image
-                    src={`${backendBaseUrl}${post.coverImage}`}
+                    src={`${post.coverImage}`}
                     alt={post.title || "Cover"}
                     width={300}
                     height={225}
@@ -450,7 +452,7 @@ export default function PostDetailPage({ params }: PostDetailPageProps) {
                   <TypeIcon className="w-3 h-3 mr-1" />
                   {post.type === "masjid" ? "Masjid" : "Artikel"}
                 </Badge>
-                {post.categories.map((cat: PostCategory) => (
+                {post.categories.map((cat) => (
                   <Badge key={cat.categoryId} variant="outline">
                     {cat.category.name}
                   </Badge>

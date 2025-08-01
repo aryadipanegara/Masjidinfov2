@@ -7,6 +7,7 @@ import {
   uploadImage,
 } from "../controllers/image.controller";
 import { upload } from "../middleware/upload.middleware";
+import { authenticate } from "../middleware/auth.middleware";
 
 const router = Router();
 
@@ -32,7 +33,7 @@ const router = Router();
  *         description: URL gambar berhasil diupload
  */
 
-router.post("/upload", upload.single("file"), uploadImage);
+router.post("/upload", upload.single("file"), authenticate, uploadImage);
 /**
  * @swagger
  * tags:

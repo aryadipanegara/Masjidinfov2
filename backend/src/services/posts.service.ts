@@ -153,6 +153,7 @@ export const postService = {
       coverImage,
       categoryIds,
       imageIds,
+      status,
     } = data;
 
     const extractedImages = extractImagesFromContent(content);
@@ -173,18 +174,16 @@ export const postService = {
         tags,
         coverImage,
         authorId,
+        status: status ?? "DRAFT",
         categories: categoryIds
           ? {
               create: categoryIds.map((categoryId) => ({ categoryId })),
             }
           : undefined,
-        // Modifikasi bagian images untuk menangani ekstraksi otomatis
         images: {
-          // Connect images yang sudah ada
           ...(allImageConnections.length > 0 && {
             connect: allImageConnections,
           }),
-          // Create images yang diekstrak dari content (jika belum ada di database)
           create: extractedImages.map((img, index) => ({
             url: img.url,
             altText: img.altText || null,
@@ -207,6 +206,7 @@ export const postService = {
       coverImage,
       categoryIds,
       imageIds,
+      status,
     } = data;
 
     const post = await prisma.post.findUnique({ where: { slug } });
@@ -230,6 +230,7 @@ export const postService = {
         excerpt,
         tags,
         coverImage,
+        status: status ?? "DRAFT",
         categories: categoryIds
           ? {
               deleteMany: {},
@@ -264,6 +265,7 @@ export const postService = {
       coverImage,
       categoryIds,
       imageIds,
+      status,
     } = data;
 
     const existingPost = await prisma.post.findUnique({ where: { id } });
@@ -287,6 +289,7 @@ export const postService = {
         excerpt,
         tags,
         coverImage,
+        status: status ?? "DRAFT",
         categories: categoryIds
           ? {
               deleteMany: {},
@@ -294,13 +297,10 @@ export const postService = {
             }
           : undefined,
         images: {
-          // Hapus semua koneksi gambar lama
           deleteMany: {},
-          // Connect images yang sudah ada (manual)
           ...(allImageConnections.length > 0 && {
             connect: allImageConnections,
           }),
-          // Create images yang diekstrak dari content
           create: extractedImages.map((img, index) => ({
             url: img.url,
             altText: img.altText || null,

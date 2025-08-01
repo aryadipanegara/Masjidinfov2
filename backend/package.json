@@ -8,7 +8,8 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "prisma:migrate": "prisma migrate dev",
-    "prisma:generate": "prisma generate"
+    "prisma:generate": "prisma generate",
+    "db:clear": "ts-node scripts/clearDatabase.ts"
   },
   "keywords": [],
   "author": "",

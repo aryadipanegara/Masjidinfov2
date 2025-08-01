@@ -10,6 +10,7 @@ import { MapPinIcon, BookOpenIcon } from "lucide-react";
 import useSWR from "swr";
 import type { Post } from "@/types/posts.types";
 import { PostService } from "@/service/posts.service";
+import Image from "next/image";
 
 const tabs = [
   { id: "all", label: "Semua", active: true },
@@ -38,8 +39,6 @@ export function RecommendationSection() {
       ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
       : "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
   };
-
-  const backendBaseUrl = process.env.NEXT_PUBLIC_BACKEND_BASE_URL || "";
 
   return (
     <div className="container mx-auto">
@@ -88,10 +87,13 @@ export function RecommendationSection() {
                   >
                     <Card className="overflow-hidden hover:shadow-lg transition-all duration-300 group p-0 h-full">
                       <div className="relative aspect-[2/3] overflow-hidden">
-                        <img
-                          src={`${backendBaseUrl}${post.coverImage}`}
+                        <Image
+                          src={`${post.coverImage}`}
                           alt={post.title}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          fill
+                          className="object-cover group-hover:scale-105 transition-transform duration-300"
+                          sizes="(max-width: 768px) 80vw, (max-width: 1024px) 50vw, 25vw"
+                          priority={false}
                         />
                         <div className="absolute top-2 left-2">
                           <Badge className={getPostTypeColor(post.type)}>

@@ -39,7 +39,6 @@ export const getPostBySlug = async (req: Request, res: Response) => {
       return res.status(404).json({ error: "Post not found" });
     }
 
-    // ⏺️ Simpan ke history jika user login
     const userId = (req as any).user?.userId;
     if (userId) {
       try {

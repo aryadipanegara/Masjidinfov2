@@ -18,6 +18,7 @@ import useSWR from "swr";
 import notify from "@/lib/notify";
 import handleErrorResponse from "@/utils/handleErrorResponse";
 import { BookmarkItem, PaginationData } from "@/types/libary.types";
+import Image from "next/image";
 
 export function BookmarkSection() {
   const [page, setPage] = useState(1);
@@ -104,11 +105,9 @@ export function BookmarkSection() {
     );
   }
 
-  const backendBaseUrl = process.env.NEXT_PUBLIC_BACKEND_BASE_URL || "";
-
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
         {bookmarks.map((bookmark: BookmarkItem, index: number) => {
           const TypeIcon = getPostTypeIcon(bookmark.type);
 
@@ -121,10 +120,13 @@ export function BookmarkSection() {
             >
               <Card className="overflow-hidden hover:shadow-xl transition-all duration-300 group h-full">
                 <div className="relative aspect-[3/4] overflow-hidden">
-                  <img
-                    src={`${backendBaseUrl}${bookmark.coverImage}`}
+                  <Image
+                    src={`${bookmark.coverImage}`}
                     alt={bookmark.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    fill
+                    className="object-cover group-hover:scale-105 transition-transform duration-300"
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                    priority={false}
                   />
                   <div className="absolute top-2 left-2">
                     <Badge className={getPostTypeColor(bookmark.type)}>

@@ -92,6 +92,25 @@ export const authService = {
     };
   },
 
+  // set password ketika login google
+  setPassword: async (userId: string, newPassword: string) => {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new Error("user tidak ditemukan");
+
+    if (user.passwordHash) {
+      throw new Error("User sudah memiliki password");
+    }
+
+    const hashed = await bcrypt.hash(newPassword, 10);
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash: hashed },
+    });
+
+    return { message: "Password berhasil diperbarui" };
+  },
+
   forgotPassword: async (email: string) => {
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) return;

@@ -15,6 +15,7 @@ import { CalendarIcon, MapPinIcon, BookOpenIcon } from "lucide-react";
 import handleErrorResponse from "@/utils/handleErrorResponse";
 import type { Post } from "@/types/posts.types";
 import { PostService } from "@/service/posts.service";
+import Image from "next/image";
 
 interface RelatedPostsProps {
   currentPost: Post;
@@ -27,9 +28,10 @@ export function RelatedPosts({ currentPost }: RelatedPostsProps) {
   useEffect(() => {
     const fetchRelatedPosts = async () => {
       try {
-        // Get posts from same category or type
         const categoryId = currentPost.categories[0]?.categoryId;
-        const params: any = { limit: 3 };
+        const params: { limit?: number; type?: string; categoryId?: string } = {
+          limit: 3,
+        };
 
         if (categoryId) {
           params.categoryId = categoryId;
@@ -75,8 +77,6 @@ export function RelatedPosts({ currentPost }: RelatedPostsProps) {
     return null;
   }
 
-  const backendBaseUrl = process.env.NEXT_PUBLIC_BACKEND_BASE_URL || "";
-
   return (
     <Card className="mt-12">
       <CardHeader>
@@ -94,15 +94,18 @@ export function RelatedPosts({ currentPost }: RelatedPostsProps) {
                 <Link href={`/posts/${post.slug}`}>
                   {post.coverImage && (
                     <div className="aspect-video overflow-hidden rounded-lg mb-3">
-                      <img
-                        src={`${backendBaseUrl}${post.coverImage}`}
+                      <Image
+                        src={post.coverImage}
                         alt={post.title}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-300"
+                        sizes="(max-width: 768px) 80vw, (max-width: 1024px) 50vw, 25vw"
+                        priority={false}
                       />
                     </div>
                   )}
                   <div className="space-y-2">
-                    <Badge className={getPostTypeColor(post.type)} size="sm">
+                    <Badge className={getPostTypeColor(post.type)}>
                       <TypeIcon className="w-3 h-3 mr-1" />
                       {post.type === "masjid" ? "Masjid" : "Artikel"}
                     </Badge>
