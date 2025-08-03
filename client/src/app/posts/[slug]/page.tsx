@@ -39,11 +39,7 @@ import { BottomCenterNavigation } from "@/components/reader/bottom-center-naviga
 import { BottomRightController } from "@/components/reader/bottom-right-controller";
 import notify from "@/lib/notify";
 import handleErrorResponse from "@/utils/handleErrorResponse";
-import type {
-  Post,
-  PostCategory,
-  UpdatePostPayload,
-} from "@/types/posts.types";
+import type { Post, UpdatePostPayload } from "@/types/posts.types";
 import { ReadingTime } from "@/components/reading-time";
 import { PostService } from "@/service/posts.service";
 import { ImageService } from "@/service/image.service";

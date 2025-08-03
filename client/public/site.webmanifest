@@ -1,0 +1,21 @@
+{
+  "name": "Masjidinfo",
+  "short_name": "Masjidinfo",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0A7E8F",
+  "description": "Aplikasi Masjid - Temukan masjid terdekat, jadwal, dan informasi ibadah.",
+  "icons": [
+    {
+      "src": "/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

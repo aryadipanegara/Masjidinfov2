@@ -15,24 +15,17 @@ import {
   removeAuthToken,
 } from "@/utils/auth";
 import { UserService } from "@/service/users.service";
-
-interface UserProfile {
-  id: string;
-  email: string;
-  role: string;
-  fullname: string;
-  avatar?: string;
-}
+import { UserDetail } from "@/types/user.types";
 
 interface AuthContextValue {
-  user: UserProfile | null;
+  user: UserDetail;
   loading: boolean;
   login: (token: string) => Promise<void>;
   logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextValue>({
-  user: null,
+  user: {} as UserDetail,
   loading: true,
   login: async () => {},
   logout: () => {},
@@ -40,7 +33,7 @@ const AuthContext = createContext<AuthContextValue>({
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | undefined>(getAuthToken());
-  const [user, setUser] = useState<UserProfile | null>(null);
+  const [user, setUser] = useState<UserDetail | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -51,10 +44,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         try {
           const res = await UserService.getMe();
-          setUser(res.data);
+          setUser(res.data as UserDetail);
         } catch {
           const basic = getCurrentUser()!;
-          setUser({ ...basic, fullname: basic.email, avatar: undefined });
+          setUser({
+            id: basic.id,
+            email: basic.email,
+            role: "VIEWER",
+            fullname: basic.email,
+            avatar: undefined,
+            isVerified: false,
+            hasGoogleAccount: false,
+            createdAt: "",
+            updatedAt: "",
+          } as UserDetail);
         }
       }
       setLoading(false);
@@ -71,7 +74,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(res.data);
     } catch {
       const basic = getCurrentUser()!;
-      setUser({ ...basic, fullname: basic.email });
+      setUser({
+        id: basic.id,
+        email: basic.email,
+        role: "VIEWER",
+        fullname: basic.email,
+        avatar: undefined,
+        isVerified: false,
+        hasGoogleAccount: false,
+        createdAt: "",
+        updatedAt: "",
+      } as UserDetail);
     }
   };
 
@@ -82,7 +95,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider
+      value={{ user: user ?? ({} as UserDetail), loading, login, logout }}
+    >
       {children}
     </AuthContext.Provider>
   );

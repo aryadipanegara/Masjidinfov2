@@ -25,4 +25,11 @@ export const AuthService = {
   getGoogleLoginUrl: () => {
     return `${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/google`;
   },
+
+  // Set initial password (Google-only users)
+  setPassword: (newPassword: string) =>
+    AxiosInstance.post("/set-password", { newPassword }),
+
+  changePassword: (currentPassword: string, newPassword: string) =>
+    AxiosInstance.post("/change-password", { currentPassword, newPassword }),
 };

@@ -257,7 +257,7 @@ export function MainNavbar() {
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem asChild>
-                      <Link href="/profile">
+                      <Link href="/my-profile">
                         <UserIcon className="mr-2 h-4 w-4" />
                         Profile
                       </Link>
@@ -422,7 +422,7 @@ export function MainNavbar() {
                     </DropdownMenuLabel>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem asChild>
-                      <Link href="/profile">
+                      <Link href="/my-profile">
                         <UserIcon className="mr-2 h-4 w-4" />
                         Profile
                       </Link>

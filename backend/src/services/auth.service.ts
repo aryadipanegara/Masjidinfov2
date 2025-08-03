@@ -95,20 +95,55 @@ export const authService = {
   // set password ketika login google
   setPassword: async (userId: string, newPassword: string) => {
     const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user) throw new Error("user tidak ditemukan");
+    if (!user) throw new Error("User tidak ditemukan");
 
     if (user.passwordHash) {
-      throw new Error("User sudah memiliki password");
+      throw new Error(
+        "Anda sudah memiliki password. Silakan gunakan fitur Ganti Password."
+      );
     }
 
     const hashed = await bcrypt.hash(newPassword, 10);
-
     await prisma.user.update({
       where: { id: userId },
       data: { passwordHash: hashed },
     });
 
-    return { message: "Password berhasil diperbarui" };
+    return { message: "Password berhasil diset." };
+  },
+
+  // change password
+  changePassword: async (
+    userId: string,
+    currentPassword: string,
+    newPassword: string
+  ) => {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new Error("User tidak ditemukan");
+
+    if (!user.passwordHash) {
+      throw new Error(
+        "Anda belum memiliki password. Silakan set password terlebih dahulu."
+      );
+    }
+
+    const isMatch = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!isMatch) {
+      throw new Error("Password lama tidak cocok.");
+    }
+
+    const isSame = await bcrypt.compare(newPassword, user.passwordHash);
+    if (isSame) {
+      throw new Error("Password baru tidak boleh sama dengan sebelumnya.");
+    }
+
+    const hashed = await bcrypt.hash(newPassword, 10);
+    await prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash: hashed },
+    });
+
+    return { message: "Password berhasil diperbarui." };
   },
 
   forgotPassword: async (email: string) => {

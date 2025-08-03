@@ -26,6 +26,7 @@ export type UserListItem = {
   hasGoogleAccount: boolean;
   createdAt: Date;
   updatedAt: Date;
+  passwordHash: string | null;
 };
 
 // 📌 Digunakan untuk `GET /users/:id` dan `/me`

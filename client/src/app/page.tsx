@@ -10,6 +10,7 @@ export const metadata = createMetadata({
   title: "Homepage",
   description:
     "Temukan rekomendasi terbaik, update terbaru, dan konten populer hanya untuk kamu.",
+  keywords: ["rekomendasi", "update", "populer", "masjid"],
 });
 
 export default function HomePage() {
@@ -18,7 +19,7 @@ export default function HomePage() {
       <MainNavbar />
       <main className="container mx-auto px-4">
         <HeroBanner />
-        <div className="pb-8  px-4">
+        <div className="pb-8 px-4">
           <h2 className="text-xl lg:text-3xl font-semibold mb-6">
             Rekomendasi
           </h2>

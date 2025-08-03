@@ -8,6 +8,7 @@ export type UserDetail = {
   hasGoogleAccount: boolean;
   createdAt: string;
   updatedAt: string;
+  hasPassword?: boolean;
 };
 
 export type UpdateUserPayload = Partial<

@@ -32,12 +32,9 @@ export default function ForgotPasswordPage() {
       const data = res.data;
 
       notify.dismiss(loadingToastId);
-      // Pesan sukses sesuai dengan backend: "Jika email terdaftar, link reset password telah dikirim."
       notify.success(
         data.message || "Tautan reset password telah dikirim ke email Anda."
       );
-      // Tidak ada pengalihan ke halaman reset-password di sini,
-      // karena pengguna akan mengklik tautan dari email mereka.
     } catch (err: unknown) {
       handleErrorResponse(err, loadingToastId);
     } finally {

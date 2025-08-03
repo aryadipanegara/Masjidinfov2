@@ -102,18 +102,45 @@ export const setPassword = async (req: Request, res: Response) => {
   const { userId, newPassword } = req.body;
 
   if (!userId) {
-    return res.status(401).json({ error: "pas" });
+    return res.status(401).json({ error: "User tidak dikenali." });
   }
-
   if (!newPassword || newPassword.length < 6) {
-    return res.status(400).json({ error: "Password minimal 6 karakter" });
+    return res.status(400).json({ error: "Password minimal 6 karakter." });
   }
 
   try {
     const result = await authService.setPassword(userId, newPassword);
-    res.json(result);
+    return res.json(result);
   } catch (err: any) {
-    res.status(400).json({ error: err.message });
+    return res.status(400).json({ error: err.message });
+  }
+};
+
+// Ganti password (user yang sudah punya password)
+export const changePassword = async (req: Request, res: Response) => {
+  const { userId, currentPassword, newPassword } = req.body;
+
+  if (!userId) {
+    return res.status(401).json({ error: "User tidak dikenali." });
+  }
+  if (!currentPassword || !newPassword) {
+    return res
+      .status(400)
+      .json({ error: "Password lama dan baru harus diisi." });
+  }
+  if (newPassword.length < 6) {
+    return res.status(400).json({ error: "Password baru minimal 6 karakter." });
+  }
+
+  try {
+    const result = await authService.changePassword(
+      userId,
+      currentPassword,
+      newPassword
+    );
+    return res.json(result);
+  } catch (err: any) {
+    return res.status(400).json({ error: err.message });
   }
 };
 

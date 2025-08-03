@@ -21,6 +21,7 @@ export const userService = {
         hasGoogleAccount: true,
         createdAt: true,
         updatedAt: true,
+        passwordHash: true,
       },
     });
   },
@@ -98,6 +99,7 @@ export const userService = {
         hasGoogleAccount: true,
         createdAt: true,
         updatedAt: true,
+        passwordHash: true,
       },
     });
   },

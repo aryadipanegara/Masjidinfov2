@@ -64,9 +64,9 @@ export default function LibraryPage() {
   }
 
   return (
-    <div className="min-h-screen">
+    <>
       <MainNavbar />
-      <main className="py-8 pb-20 md:pb-8 px-14">
+      <main className="min-h-screen py-8 pb-20 md:pb-8 px-14">
         <div className="container mx-auto">
           <div className="mb-8">
             <h1 className="text-3xl font-bold mb-2">Library</h1>
@@ -110,6 +110,6 @@ export default function LibraryPage() {
         </div>
       </main>
       <MainFooter />
-    </div>
+    </>
   );
 }

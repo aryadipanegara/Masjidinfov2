@@ -9,6 +9,7 @@ import {
   refreshToken,
   logout,
   setPassword,
+  changePassword,
 } from "../controllers/auth.controller";
 import { authenticate } from "../middleware/auth.middleware";
 
@@ -172,7 +173,66 @@ router.get(
   })
 );
 
+/**
+ * @swagger
+ * components:
+ *   securitySchemes:
+ *     bearerAuth:
+ *       type: http
+ *       scheme: bearer
+ *       bearerFormat: JWT
+ *
+ *   schemas:
+ *     SetPasswordRequest:
+ *       type: object
+ *       required:
+ *         - newPassword
+ *       properties:
+ *         newPassword:
+ *           type: string
+ *           description: Password baru yang ingin diset
+ *           example: "MyS3cretP@ss"
+ *
+ *     MessageResponse:
+ *       type: object
+ *       properties:
+ *         message:
+ *           type: string
+ *           example: "Password berhasil diset."
+ *
+ * /set-password:
+ *   post:
+ *     tags:
+ *       - Authentication
+ *     summary: Inisialisasi password pertama kali untuk user Google OAuth
+ *     description: >
+ *       Endpoint ini hanya untuk user yang login via Google dan belum memiliki password.
+ *       Jika `passwordHash` sudah ada, akan mereturn error dan menyuruh memakai fitur ganti password.
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/SetPasswordRequest'
+ *     responses:
+ *       '200':
+ *         description: Password berhasil diset
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/MessageResponse'
+ *       '401':
+ *         description: Unauthorized. Token tidak valid atau tidak disertakan.
+ *       '404':
+ *         description: User tidak ditemukan.
+ *       '409':
+ *         description: User sudah memiliki password. Harap gunakan endpoint ganti password.
+ */
 router.post("/set-password", authenticate, setPassword);
+
+router.post("/change-password", authenticate, changePassword);
 
 /**
  * @swagger

@@ -14,13 +14,18 @@ export const getMe = async (req: Request, res: Response) => {
   }
 
   try {
-    const user: UserDetail | null = await userService.getUserProfile(userId);
-
+    const user = await userService.getUserProfile(userId);
     if (!user) {
       return res.status(404).json({ error: "User tidak ditemukan." });
     }
 
-    res.json(user);
+    const hasPassword = Boolean(user.passwordHash);
+    const { passwordHash, ...safeUser } = user;
+
+    res.json({
+      ...safeUser,
+      hasPassword,
+    });
   } catch (err) {
     console.error("Error fetching user:", err);
     res
