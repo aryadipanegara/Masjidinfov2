@@ -98,7 +98,6 @@ export default function PostDetailPage({ params }: PostDetailPageProps) {
   const [bookmarkCount, setBookmarkCount] = useState(0);
   const [viewCount, setViewCount] = useState(0);
   const [rating, setRating] = useState(0);
-  const [likeCount, setLikeCount] = useState(0);
   const [relatedPosts, setRelatedPosts] = useState([]);
 
   const canEdit =
@@ -112,11 +111,11 @@ export default function PostDetailPage({ params }: PostDetailPageProps) {
         excerpt: post.excerpt,
         coverImage: post.coverImage,
         tags: post.tags,
+        viewCount: post.viewCount,
       });
-      setBookmarkCount(Math.floor(Math.random() * 1000) + 100);
-      setViewCount(Math.floor(Math.random() * 10000) + 1000);
+      setBookmarkCount(post.bookmarkCount ?? 0);
+      setViewCount(post.viewCount ?? 0);
       setRating(4.2 + Math.random() * 0.8);
-      setLikeCount(Math.floor(Math.random() * 5000) + 500);
     }
   }, [post, hasChanges]);
 
@@ -523,10 +522,6 @@ export default function PostDetailPage({ params }: PostDetailPageProps) {
                 <div className="flex items-center gap-1 text-green-500">
                   <EyeIcon className="w-4 h-4" />
                   <span className="font-medium">{formatNumber(viewCount)}</span>
-                </div>
-                <div className="flex items-center gap-1 text-red-500">
-                  <HeartIcon className="w-4 h-4" />
-                  <span className="font-medium">{formatNumber(likeCount)}</span>
                 </div>
               </div>
 

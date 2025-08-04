@@ -22,10 +22,13 @@ export function RecommendationSection() {
   const [activeTab, setActiveTab] = useState("all");
 
   const { data: posts, isLoading } = useSWR(
-    `/posts/recommendations?type=${activeTab}`,
+    `/posts/recommended?type=${activeTab}`,
     async () => {
       const params = activeTab === "all" ? {} : { type: activeTab };
-      const response = await PostService.getAll({ ...params, limit: 8 });
+      const response = await PostService.getRecommended({
+        ...params,
+        limit: 8,
+      });
       return response.data.data;
     }
   );

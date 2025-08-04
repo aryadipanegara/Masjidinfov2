@@ -3,14 +3,39 @@ import { Prisma, PostType } from "@prisma/client";
 
 export const bookmarkService = {
   addBookmark: async (userId: string, postId: string) => {
-    return prisma.bookmark.create({
-      data: { userId, postId },
-    });
+    return prisma.$transaction([
+      prisma.bookmark.create({
+        data: { userId, postId },
+      }),
+      prisma.post.update({
+        where: { id: postId },
+        data: { bookmarkCount: { increment: 1 } },
+      }),
+    ]);
   },
 
   removeBookmark: async (userId: string, postId: string) => {
-    return prisma.bookmark.delete({
-      where: { userId_postId: { userId, postId } },
+    return prisma.$transaction(async (tx) => {
+      const deletedBookmark = await tx.bookmark.delete({
+        where: {
+          userId_postId: { userId, postId },
+        },
+        select: { id: true },
+      });
+
+      const post = await tx.post.findUnique({
+        where: { id: postId },
+        select: { bookmarkCount: true },
+      });
+
+      if (post && post.bookmarkCount > 0) {
+        await tx.post.update({
+          where: { id: postId },
+          data: { bookmarkCount: { decrement: 1 } },
+        });
+      }
+
+      return deletedBookmark;
     });
   },
 
@@ -99,5 +124,11 @@ export const bookmarkService = {
         hasPrevPage: page > 1,
       },
     };
+  },
+  hasBookmarked: async (userId: string, postId: string) => {
+    const count = await prisma.bookmark.count({
+      where: { userId, postId },
+    });
+    return count > 0;
   },
 };

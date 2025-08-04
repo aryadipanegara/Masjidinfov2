@@ -1,56 +1,39 @@
 import { prisma } from "../config/prisma.config";
-import { Prisma, PostType } from "@prisma/client";
-import { CreatePostPayload } from "../types/posts.types";
-import {
-  extractImagesFromContent,
-  removeDuplicateImages,
-} from "../utils/imageExtractor.utils";
+import { Prisma, PostType, PostStatus } from "@prisma/client";
+import { CreatePostPayload, GetPostsOptions } from "../types/posts.types";
+import { extractImagesFromContent } from "../utils/imageExtractor.utils";
 
 export const postService = {
-  getPosts: async (
-    page: number = 1,
-    limit: number = 10,
-    search: string = "",
-    type?: PostType,
-    categoryId?: string
-  ) => {
+  getPosts: async (opts: GetPostsOptions) => {
+    const {
+      page = 1,
+      limit = 10,
+      search = "",
+      type,
+      categoryId,
+      showAll = false,
+      status = PostStatus.PUBLISHED,
+    } = opts;
+
     const skip = (page - 1) * limit;
 
     const where: Prisma.PostWhereInput = {
       isDeleted: false,
+      ...(showAll ? {} : { status }),
       AND: [
         search
           ? {
               OR: [
-                {
-                  title: {
-                    contains: search,
-                    mode: Prisma.QueryMode.insensitive,
-                  },
-                },
-                {
-                  excerpt: {
-                    contains: search,
-                    mode: Prisma.QueryMode.insensitive,
-                  },
-                },
-                {
-                  content: {
-                    contains: search,
-                    mode: Prisma.QueryMode.insensitive,
-                  },
-                },
+                { title: { contains: search, mode: "insensitive" } },
+                { excerpt: { contains: search, mode: "insensitive" } },
+                { content: { contains: search, mode: "insensitive" } },
               ],
             }
           : {},
         type ? { type: { equals: type } } : {},
         categoryId
           ? {
-              categories: {
-                some: {
-                  categoryId,
-                },
-              },
+              categories: { some: { categoryId } },
             }
           : {},
       ],
@@ -62,23 +45,15 @@ export const postService = {
         where,
         skip,
         take: limit,
-        orderBy: { publishedAt: "desc" },
+        orderBy: [{ viewCount: "desc" }, { bookmarks: { _count: "desc" } }],
         include: {
-          categories: {
-            include: {
-              category: true,
-            },
-          },
+          categories: { include: { category: true } },
           images: true,
           author: {
-            select: {
-              id: true,
-              fullname: true,
-              email: true,
-              avatar: true,
-            },
+            select: { id: true, fullname: true, email: true, avatar: true },
           },
           masjidInfo: true,
+          _count: { select: { bookmarks: true } },
         },
       }),
     ]);
@@ -120,8 +95,8 @@ export const postService = {
   },
 
   getPostBySlug: async (slug: string) => {
-    return prisma.post.findUnique({
-      where: { slug },
+    const post = await prisma.post.findUnique({
+      where: { slug, isDeleted: false },
       include: {
         categories: {
           include: {
@@ -140,6 +115,25 @@ export const postService = {
         masjidInfo: true,
       },
     });
+
+    if (!post) {
+      throw new Error("Post not found");
+    }
+
+    prisma.post
+      .update({
+        where: { slug },
+        data: { viewCount: { increment: 1 } },
+      })
+      .catch((err) => {
+        console.error(
+          "Failed to increment viewCount for post slug:",
+          slug,
+          err
+        );
+      });
+
+    return post;
   },
 
   createPost: async (data: CreatePostPayload, authorId: string) => {

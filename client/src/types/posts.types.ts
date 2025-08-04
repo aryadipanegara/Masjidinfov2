@@ -18,6 +18,8 @@ export interface Post {
   type: PostType;
   coverImage?: string;
   status: PostStatus;
+  viewCount: number;
+  bookmarkCount: number;
   author: {
     id: string;
     fullname: string;
@@ -66,6 +68,7 @@ export interface CreatePostPayload {
   imageIds?: string[];
   status: PostStatus;
   isDeleted?: boolean;
+  viewCount?: number;
 }
 
 export interface PostCategory {

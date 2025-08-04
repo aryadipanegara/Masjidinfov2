@@ -1,7 +1,8 @@
 import { Request, Response } from "express";
 import { postService } from "../services/posts.service";
-import { PostType } from "@prisma/client";
+import { PostStatus, PostType } from "@prisma/client";
 import { historyService } from "../services/history.service";
+import { GetPostsOptions } from "../types/posts.types";
 
 export const getPosts = async (req: Request, res: Response) => {
   const page = parseInt(req.query.page as string) || 1;
@@ -9,14 +10,83 @@ export const getPosts = async (req: Request, res: Response) => {
   const search = (req.query.search as string) || "";
   const type = req.query.type as PostType | undefined;
   const categoryId = req.query.categoryId as string | undefined;
+  const statusParam = req.query.status as PostStatus | undefined;
 
-  const result = await postService.getPosts(
+  const user = req.user as { role: string } | undefined;
+  const isAdmin = user?.role === "SUPER_ADMIN";
+
+  const options: GetPostsOptions = {
     page,
     limit,
     search,
     type,
-    categoryId
-  );
+    categoryId,
+    showAll: isAdmin && !statusParam,
+    status: isAdmin
+      ? statusParam ?? PostStatus.PUBLISHED
+      : PostStatus.PUBLISHED,
+  };
+
+  const result = await postService.getPosts(options);
+  res.json(result);
+};
+
+export const getPopularPosts = async (req: Request, res: Response) => {
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = parseInt(req.query.limit as string) || 10;
+  const search = (req.query.search as string) || "";
+  const type = req.query.type as PostType | undefined;
+  const categoryId = req.query.categoryId as string | undefined;
+  const statusParam = req.query.status as PostStatus | undefined;
+
+  const user = req.user as { role: string } | undefined;
+  const isAdmin = user?.role === "SUPER_ADMIN";
+
+  const options = {
+    page,
+    limit,
+    search,
+    type,
+    categoryId,
+    showAll: isAdmin && !statusParam,
+    status: isAdmin
+      ? statusParam ?? PostStatus.PUBLISHED
+      : PostStatus.PUBLISHED,
+    orderBy: { viewCount: "desc" } as const, // 🔥 Urutkan dari yang paling sering dibaca
+  };
+
+  const result = await postService.getPosts(options);
+  res.json(result);
+};
+
+export const getRecommendedPosts = async (req: Request, res: Response) => {
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = parseInt(req.query.limit as string) || 10;
+  const search = (req.query.search as string) || "";
+  const type = req.query.type as PostType | undefined;
+  const categoryId = req.query.categoryId as string | undefined;
+  const statusParam = req.query.status as PostStatus | undefined;
+
+  const user = req.user as { role: string } | undefined;
+  const isAdmin = user?.role === "SUPER_ADMIN";
+
+  const options: GetPostsOptions = {
+    page,
+    limit,
+    search,
+    type,
+    categoryId,
+    showAll: isAdmin && !statusParam,
+    status: isAdmin
+      ? statusParam ?? PostStatus.PUBLISHED
+      : PostStatus.PUBLISHED,
+    orderBy: {
+      viewCount: "desc",
+      bookmarkCount: "desc",
+    },
+  };
+
+  const result = await postService.getPosts(options);
   res.json(result);
 };
 
@@ -54,6 +124,7 @@ export const getPostBySlug = async (req: Request, res: Response) => {
     res.status(500).json({ error: "Internal server error" });
   }
 };
+
 export const createPost = async (req: Request, res: Response) => {
   try {
     const authorId = (req as any).user?.userId;

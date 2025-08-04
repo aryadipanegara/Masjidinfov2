@@ -149,6 +149,10 @@ model Post {
   coverImage  String?       @map("cover_image")
   tags        String[]      @map("tags")
   status      PostStatus    @default(DRAFT) @map("status")
+  viewCount   Int           @default(0) @map("view_count")
+  bookmarkCount Int         @default(0) @map("bookmark_count")
+  countryCode String        @default("ALL") @map("country_code")
+
   publishedAt DateTime      @default(now()) @map("published_at")
   updatedAt   DateTime      @updatedAt @map("updated_at")
   isDeleted   Boolean       @default(false) @map("is_deleted")

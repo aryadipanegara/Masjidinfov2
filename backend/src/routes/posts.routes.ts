@@ -3,9 +3,11 @@ import { authenticate } from "../middleware/auth.middleware";
 import {
   createPost,
   deletePost,
+  getPopularPosts,
   getPostById,
   getPostBySlug,
   getPosts,
+  getRecommendedPosts,
   updatePost,
   updatePostBySlug,
 } from "../controllers/posts.controller";
@@ -48,6 +50,8 @@ const router = Router();
  *         description: List of posts
  */
 router.get("/", getPosts);
+router.get("/popular", getPopularPosts);
+router.get("/recommended", getRecommendedPosts);
 
 router.get("/slug/:slug", getPostBySlug);
 

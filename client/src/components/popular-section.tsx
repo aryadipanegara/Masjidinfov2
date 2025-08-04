@@ -14,7 +14,7 @@ export function PopularSection() {
   const { data: posts, isLoading } = useSWR<Post[]>(
     "/posts/popular",
     async () => {
-      const response = await PostService.getAll({ limit: 8 });
+      const response = await PostService.getPopular({ limit: 8 });
       return response.data.data;
     }
   );
