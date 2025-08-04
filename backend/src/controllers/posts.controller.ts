@@ -52,7 +52,7 @@ export const getPopularPosts = async (req: Request, res: Response) => {
     status: isAdmin
       ? statusParam ?? PostStatus.PUBLISHED
       : PostStatus.PUBLISHED,
-    orderBy: { viewCount: "desc" } as const, // 🔥 Urutkan dari yang paling sering dibaca
+    orderBy: { viewCount: "desc" } as const,
   };
 
   const result = await postService.getPosts(options);
@@ -179,6 +179,30 @@ export const updatePost = async (req: Request, res: Response) => {
 
 export const deletePost = async (req: Request, res: Response) => {
   const { id } = req.params;
-  await postService.deletePost(id);
-  res.status(204).end();
+  try {
+    await postService.softDeletePost(id);
+    res.status(200).json({
+      message: "Post dijadwalkan untuk dihapus (soft-delete).",
+    });
+  } catch (err: any) {
+    console.error("Delete Post Error:", err);
+    if (err.message.includes("not found")) {
+      return res.status(404).json({ error: "Post tidak ditemukan." });
+    }
+    res.status(500).json({ error: "Gagal melakukan soft-delete post." });
+  }
+};
+
+export const restorePost = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  try {
+    await postService.restorePost(id);
+    res.status(200).json({ message: "Post berhasil dipulihkan." });
+  } catch (err: any) {
+    console.error("Restore Post Error:", err);
+    if (err.message.includes("not found")) {
+      return res.status(404).json({ error: "Post tidak ditemukan." });
+    }
+    res.status(500).json({ error: "Gagal memulihkan post." });
+  }
 };

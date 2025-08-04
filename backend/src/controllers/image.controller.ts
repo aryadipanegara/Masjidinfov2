@@ -180,21 +180,39 @@ export const updateImage = async (req: Request, res: Response) => {
 };
 
 export const deleteImage = async (req: Request, res: Response) => {
+  const { id } = req.params;
   try {
-    const { id } = req.params;
-
     await imageService.deleteImageById(id);
-
     res.status(200).json({
-      message: "Gambar berhasil dihapus",
+      message: "Gambar dijadwalkan untuk dihapus (soft-delete).",
     });
   } catch (error: any) {
     console.error("Delete Image Controller Error:", error);
-    if (error.message && error.message.includes("not found")) {
+    if (error.message.includes("not found")) {
       return res
         .status(404)
         .json({ error: "Gambar tidak ditemukan untuk dihapus." });
     }
-    res.status(500).json({ error: error.message || "Gagal menghapus gambar" });
+    res
+      .status(500)
+      .json({ error: error.message || "Gagal melakukan soft-delete gambar." });
+  }
+};
+
+export const restoreImage = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  try {
+    await imageService.restoreImageById(id);
+    res.status(200).json({ message: "Gambar berhasil dipulihkan." });
+  } catch (error: any) {
+    console.error("Restore Image Controller Error:", error);
+    if (error.message.includes("not found")) {
+      return res
+        .status(404)
+        .json({ error: "Gambar tidak ditemukan untuk dipulihkan." });
+    }
+    res
+      .status(500)
+      .json({ error: error.message || "Gagal memulihkan gambar." });
   }
 };

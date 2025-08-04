@@ -151,11 +151,11 @@ model Post {
   status      PostStatus    @default(DRAFT) @map("status")
   viewCount   Int           @default(0) @map("view_count")
   bookmarkCount Int         @default(0) @map("bookmark_count")
-  countryCode String        @default("ALL") @map("country_code")
 
   publishedAt DateTime      @default(now()) @map("published_at")
   updatedAt   DateTime      @updatedAt @map("updated_at")
   isDeleted   Boolean       @default(false) @map("is_deleted")
+  deletedAt   DateTime?     @map("deleted_at")
 
   authorId    String        @map("author_id")
   author      User          @relation("userPosts", fields: [authorId], references: [id], onDelete: Restrict)
@@ -203,6 +203,8 @@ model Image {
 
   postId     String?  @map("post_id")
   post       Post?    @relation(fields: [postId], references: [id], onDelete: SetNull)
+  isDeleted  Boolean       @default(false) @map("is_deleted")
+  deletedAt  DateTime?     @map("deleted_at")
 
   uploadedById String?   @map("uploaded_by_id")
   uploadedBy   User?    @relation("UserImages", fields: [uploadedById], references: [id], onDelete: SetNull)

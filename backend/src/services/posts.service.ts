@@ -306,10 +306,35 @@ export const postService = {
     });
   },
 
-  deletePost: async (id: string) => {
-    return prisma.post.update({
-      where: { id },
-      data: { isDeleted: true },
-    });
+  softDeletePost: async (postId: string) => {
+    return prisma.$transaction([
+      prisma.post.update({
+        where: { id: postId },
+        data: {
+          isDeleted: true,
+          deletedAt: new Date(),
+        },
+      }),
+      prisma.image.updateMany({
+        where: { postId },
+        data: {
+          isDeleted: true,
+          deletedAt: new Date(),
+        },
+      }),
+    ]);
+  },
+
+  restorePost: async (postId: string) => {
+    return prisma.$transaction([
+      prisma.post.update({
+        where: { id: postId },
+        data: { isDeleted: false, deletedAt: null },
+      }),
+      prisma.image.updateMany({
+        where: { postId },
+        data: { isDeleted: false, deletedAt: null },
+      }),
+    ]);
   },
 };

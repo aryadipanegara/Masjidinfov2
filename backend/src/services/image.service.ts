@@ -79,7 +79,10 @@ export const imageService = {
 
   getImages: async (postId?: string) => {
     return prisma.image.findMany({
-      where: postId ? { postId } : undefined,
+      where: {
+        isDeleted: false,
+        ...(postId ? { postId } : {}),
+      },
       orderBy: { order: "asc" },
       include: {
         uploadedBy: {
@@ -95,7 +98,7 @@ export const imageService = {
 
   getImageById: async (id: string) => {
     return prisma.image.findUnique({
-      where: { id },
+      where: { id, isDeleted: false },
       include: {
         uploadedBy: {
           select: {
@@ -146,26 +149,27 @@ export const imageService = {
   },
 
   deleteImageById: async function (id: string) {
-    try {
-      const imageRecord = await prisma.image.findUnique({
-        where: { id },
-      });
-
-      if (!imageRecord) {
-        console.warn(`Image with ID ${id} not found in database.`);
-        return;
-      }
-
-      await this.deleteImageByPath(imageRecord.url);
-
-      await prisma.image.delete({
-        where: { id },
-      });
-
-      console.log(`Successfully deleted image record and file for ID: ${id}`);
-    } catch (error) {
-      console.error("Error deleting image by ID:", error);
-      throw new Error("Gagal menghapus gambar dari sistem.");
+    const imageRecord = await prisma.image.findUnique({
+      where: { id },
+      select: { id: true },
+    });
+    if (!imageRecord) {
+      throw new Error(`Image with ID ${id} not found`);
     }
+
+    await prisma.image.update({
+      where: { id },
+      data: {
+        isDeleted: true,
+        deletedAt: new Date(),
+      },
+    });
+  },
+
+  restoreImageById: async function (id: string) {
+    await prisma.image.update({
+      where: { id },
+      data: { isDeleted: false, deletedAt: null },
+    });
   },
 };

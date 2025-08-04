@@ -8,6 +8,7 @@ import {
   getPostBySlug,
   getPosts,
   getRecommendedPosts,
+  restorePost,
   updatePost,
   updatePostBySlug,
 } from "../controllers/posts.controller";
@@ -50,7 +51,9 @@ const router = Router();
  *         description: List of posts
  */
 router.get("/", getPosts);
+
 router.get("/popular", getPopularPosts);
+
 router.get("/recommended", getRecommendedPosts);
 
 router.get("/slug/:slug", getPostBySlug);
@@ -176,5 +179,7 @@ router.put("/:id", authenticate, updatePost);
  *         description: Post not found
  */
 router.delete("/:id", authenticate, deletePost);
+
+router.post("/:id/restore", authenticate, restorePost);
 
 export default router;
