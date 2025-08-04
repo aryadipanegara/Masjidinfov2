@@ -11,7 +11,6 @@ export function EditorStats({ editor }: EditorStatsProps) {
   const characterCount = editor.storage.characterCount.characters();
   const wordCount = editor.storage.characterCount.words();
 
-  // Estimate reading time (average 200 words per minute)
   const readingTime = Math.ceil(wordCount / 200);
 
   return (

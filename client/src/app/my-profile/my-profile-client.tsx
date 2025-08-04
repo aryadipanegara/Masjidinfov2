@@ -1,7 +1,6 @@
 "use client";
 
 import type React from "react";
-
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,30 +17,42 @@ import { Badge } from "@/components/ui/badge";
 import { AuthService } from "@/service/auth.service";
 import notify from "@/lib/notify";
 import { User, Mail, Lock, LogOut, Shield, Eye, EyeOff } from "lucide-react";
-import { useAuth } from "../providers";
 import { UserService } from "@/service/users.service";
 import handleErrorResponse from "@/utils/handleErrorResponse";
+import useSWR from "swr";
+import { useAuth } from "../providers";
+import { UserDetail } from "@/types/user.types";
+
+const fetchUserProfile = async (): Promise<UserDetail> => {
+  const response = await UserService.getMe();
+  return response.data;
+};
 
 export default function MyProfileClient() {
-  const { user: profile, loading: isLoading, logout: authLogout } = useAuth();
+  const { logout: authLogout } = useAuth();
+  const {
+    data: profile,
+    error,
+    isLoading,
+    mutate,
+  } = useSWR<UserDetail>("/api/users/me", fetchUserProfile, {
+    revalidateOnFocus: false,
+  });
+
   const [updating, setUpdating] = useState(false);
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
-  // Form states
   const [profileForm, setProfileForm] = useState({
     fullname: profile?.fullname || "",
     email: profile?.email || "",
   });
-
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",
   });
 
-  // Update form when profile data loads
   useEffect(() => {
     if (profile) {
       setProfileForm({
@@ -49,36 +60,28 @@ export default function MyProfileClient() {
         email: profile.email,
       });
     }
-  }, [profile]);
+  }, [profile]); // Depend on profile from SWR
 
-  // Determine if user has password (Google users who haven't set password yet)
   const hasPassword = profile?.hasPassword ?? false;
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!profileForm.fullname.trim()) {
       notify.error("Full name is required");
       return;
     }
-
     if (!profile) return;
 
     let loadingToast: string | number | undefined;
-
     try {
       setUpdating(true);
       loadingToast = notify.loading("Updating profile...");
-
       await UserService.updateUser(profile.id, {
         fullname: profileForm.fullname,
       });
-
       notify.dismiss(loadingToast);
       notify.success("Profile updated successfully");
-
-      // Refresh user data by calling getMe again
-      window.location.reload();
+      await mutate(); // Revalidate SWR cache to update UI
     } catch (error) {
       if (loadingToast) notify.dismiss(loadingToast);
       handleErrorResponse(error);
@@ -89,36 +92,30 @@ export default function MyProfileClient() {
 
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
       notify.error("New passwords do not match");
       return;
     }
-
     if (passwordForm.newPassword.length < 8) {
       notify.error("Password must be at least 8 characters long");
       return;
     }
-
     let loadingToast: string | number | undefined;
-
     try {
       setUpdating(true);
       loadingToast = notify.loading("Changing password...");
-
       await AuthService.changePassword(
         passwordForm.currentPassword,
         passwordForm.newPassword
       );
-
       setPasswordForm({
         currentPassword: "",
         newPassword: "",
         confirmPassword: "",
       });
-
       notify.dismiss(loadingToast);
       notify.success("Password changed successfully");
+      await mutate(); // Revalidate SWR cache to update hasPassword status if needed
     } catch (error) {
       if (loadingToast) notify.dismiss(loadingToast);
       handleErrorResponse(error);
@@ -129,38 +126,29 @@ export default function MyProfileClient() {
 
   const handleSetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
       notify.error("Passwords do not match");
       return;
     }
-
     if (passwordForm.newPassword.length < 8) {
       notify.error("Password must be at least 8 characters long");
       return;
     }
-
     let loadingToast: string | number | undefined;
-
     try {
       setUpdating(true);
       loadingToast = notify.loading("Setting password...");
-
       await AuthService.setPassword(passwordForm.newPassword);
-
       setPasswordForm({
         currentPassword: "",
         newPassword: "",
         confirmPassword: "",
       });
-
       notify.dismiss(loadingToast);
       notify.success(
         "Password set successfully! You can now login with email and password."
       );
-
-      // Refresh user data
-      window.location.reload();
+      await mutate();
     } catch (error) {
       if (loadingToast) notify.dismiss(loadingToast);
       handleErrorResponse(error);
@@ -171,7 +159,6 @@ export default function MyProfileClient() {
 
   const handleLogout = async () => {
     let loadingToast: string | number | undefined;
-
     try {
       loadingToast = notify.loading("Logging out...");
       await AuthService.logout();
@@ -199,7 +186,7 @@ export default function MyProfileClient() {
     );
   }
 
-  if (!profile) {
+  if (error || !profile) {
     return (
       <div className="container mx-auto py-8 px-4">
         <div className="max-w-4xl mx-auto text-center">
@@ -209,7 +196,9 @@ export default function MyProfileClient() {
           <p className="text-gray-600 mt-2">
             Unable to load your profile information.
           </p>
-          <Button onClick={() => window.location.reload()} className="mt-4">
+          <Button onClick={() => mutate()} className="mt-4">
+            {" "}
+            {/* Use mutate to retry fetching */}
             Try Again
           </Button>
         </div>
@@ -237,7 +226,6 @@ export default function MyProfileClient() {
             Logout
           </Button>
         </div>
-
         <div className="grid gap-6 md:grid-cols-2">
           {/* Profile Information */}
           <Card>
@@ -248,6 +236,7 @@ export default function MyProfileClient() {
                     src={
                       profile.avatar || "/placeholder.svg?height=64&width=64"
                     }
+                    alt={profile.fullname}
                   />
                   <AvatarFallback className="text-lg">
                     {profile.fullname
@@ -311,7 +300,6 @@ export default function MyProfileClient() {
               </div>
             </CardContent>
           </Card>
-
           {/* Update Profile Form */}
           <Card>
             <CardHeader>
@@ -367,7 +355,6 @@ export default function MyProfileClient() {
             </CardContent>
           </Card>
         </div>
-
         {/* Password Section */}
         <Card>
           <CardHeader>
@@ -421,7 +408,6 @@ export default function MyProfileClient() {
                   </div>
                 </div>
               )}
-
               <div className="space-y-2">
                 <Label htmlFor="newPassword">New Password</Label>
                 <div className="relative">
@@ -453,7 +439,6 @@ export default function MyProfileClient() {
                   </Button>
                 </div>
               </div>
-
               <div className="space-y-2">
                 <Label htmlFor="confirmPassword">Confirm New Password</Label>
                 <div className="relative">
@@ -485,7 +470,6 @@ export default function MyProfileClient() {
                   </Button>
                 </div>
               </div>
-
               {!hasPassword && (
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                   <div className="flex items-start">
@@ -503,7 +487,6 @@ export default function MyProfileClient() {
                   </div>
                 </div>
               )}
-
               <Button type="submit" disabled={updating} className="w-full">
                 {updating
                   ? "Processing..."

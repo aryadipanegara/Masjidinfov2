@@ -74,8 +74,6 @@ export default function SearchPage() {
     if (query) setSearchQuery(query);
   }, [searchParams]);
 
-  const backendBaseUrl = process.env.NEXT_PUBLIC_BACKEND_BASE_URL || "";
-
   const getTypeConfig = (type: string) => {
     return typeOptions.find((t) => t.id === type) || typeOptions[1];
   };
@@ -259,10 +257,10 @@ export default function SearchPage() {
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ duration: 0.3, delay: index * 0.05 }}
                         >
-                          <Card className="overflow-hidden hover:shadow-xl transition-all duration-300 group border-0 bg-white dark:bg-gray-800">
+                          <Card className="overflow-hidden hover:shadow-xl transition-all duration-300 group border-0  p-0">
                             <div className="relative aspect-[3/4] overflow-hidden">
                               <Image
-                                src={`${backendBaseUrl}${post.coverImage}`}
+                                src={`${post.coverImage}`}
                                 alt={post.title}
                                 fill
                                 className="object-cover group-hover:scale-105 transition-transform duration-300"

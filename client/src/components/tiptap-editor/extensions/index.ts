@@ -32,10 +32,8 @@ import {
 } from "@tiptap/extension-table";
 import { CustomImage } from "../image-extension";
 
-// Create lowlight instance
 const lowlight = createLowlight();
 
-// Register languages
 lowlight.register("javascript", javascript);
 lowlight.register("typescript", typescript);
 lowlight.register("html", html);
@@ -48,7 +46,7 @@ lowlight.register("json", json);
 
 export const getExtensions = () => [
   StarterKit.configure({
-    codeBlock: false, // We'll use CodeBlockLowlight instead
+    codeBlock: false,
   }),
 
   // Text Formatting

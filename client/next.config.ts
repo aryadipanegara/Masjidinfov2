@@ -1,10 +1,6 @@
-// next.config.js
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  experimental: {
-    globalNotFound: true,
-  },
   images: {
     remotePatterns: [
       {

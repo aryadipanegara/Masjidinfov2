@@ -19,6 +19,7 @@ import type {
 import notify from "@/lib/notify";
 import handleErrorResponse from "@/utils/handleErrorResponse";
 import useSWR from "swr";
+import { ConfirmationDialog } from "../confirmation-dialog";
 
 interface CommentSectionProps {
   postId: string;
@@ -37,6 +38,11 @@ export function CommentSection({ postId }: CommentSectionProps) {
     sort: "recent",
   });
   const [submitting, setSubmitting] = useState(false);
+  const [showDeleteCommentConfirm, setShowDeleteCommentConfirm] =
+    useState(false);
+  const [commentToDeleteId, setCommentToDeleteId] = useState<string | null>(
+    null
+  );
 
   const {
     data: commentsResponse,
@@ -83,11 +89,9 @@ export function CommentSection({ postId }: CommentSectionProps) {
       } else {
         await CommentService.like(commentId);
       }
-
       await mutate(
         (currentData) => {
           if (!currentData?.data?.data) return currentData;
-
           const updateCommentLike = (comments: Comment[]): Comment[] => {
             return comments.map((comment) => {
               if (comment.id === commentId) {
@@ -108,7 +112,6 @@ export function CommentSection({ postId }: CommentSectionProps) {
               return comment;
             });
           };
-
           return {
             ...currentData,
             data: {
@@ -119,7 +122,6 @@ export function CommentSection({ postId }: CommentSectionProps) {
         },
         { revalidate: false }
       );
-
       setTimeout(() => mutate(), 500);
     } catch (err) {
       handleErrorResponse(err);
@@ -137,16 +139,23 @@ export function CommentSection({ postId }: CommentSectionProps) {
     }
   };
 
-  const handleDeleteComment = async (commentId: string) => {
-    if (confirm("Yakin ingin menghapus komentar ini?")) {
-      try {
-        await CommentService.delete(commentId);
-        await mutate();
-        notify.success("Komentar berhasil dihapus!");
-      } catch (err) {
-        handleErrorResponse(err);
-      }
+  const confirmDeleteComment = async () => {
+    if (!commentToDeleteId) return;
+    try {
+      await CommentService.delete(commentToDeleteId);
+      await mutate();
+      notify.success("Komentar berhasil dihapus!");
+    } catch (err) {
+      handleErrorResponse(err);
+    } finally {
+      setShowDeleteCommentConfirm(false);
+      setCommentToDeleteId(null);
     }
+  };
+
+  const handleDeleteComment = (commentId: string) => {
+    setCommentToDeleteId(commentId);
+    setShowDeleteCommentConfirm(true);
   };
 
   const handleReply = async (
@@ -163,17 +172,13 @@ export function CommentSection({ postId }: CommentSectionProps) {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        {/* Title */}
         <div className="flex items-center gap-3">
           <MessageCircleIcon className="h-6 w-6 text-gray-600 flex-shrink-0" />
           <h3 className="text-lg sm:text-xl font-semibold">
             {totalComments} Komentar
           </h3>
         </div>
-
-        {/* Sort Options */}
         <div className="flex flex-wrap gap-2">
           {sortOptions.map((option) => {
             const Icon = option.icon;
@@ -193,18 +198,12 @@ export function CommentSection({ postId }: CommentSectionProps) {
           })}
         </div>
       </div>
-
       <Separator />
-
-      {/* Comment Form */}
       <CommentForm
         onSubmit={(content) => handleCreateComment(content)}
         loading={submitting}
       />
-
       <Separator />
-
-      {/* Comments List */}
       <div className="space-y-1">
         {isLoading ? (
           <div className="space-y-4">
@@ -245,10 +244,11 @@ export function CommentSection({ postId }: CommentSectionProps) {
                 onReply={handleReply}
                 onLike={handleLikeComment}
                 onEdit={handleEditComment}
-                onDelete={handleDeleteComment}
+                onDelete={async (commentId: string) =>
+                  handleDeleteComment(commentId)
+                }
               />
             ))}
-
             {/* Load More */}
             {commentsData?.pagination?.hasNextPage && (
               <div className="text-center pt-6">
@@ -265,6 +265,18 @@ export function CommentSection({ postId }: CommentSectionProps) {
           </>
         )}
       </div>
+
+      {/* Delete Comment Confirmation Dialog */}
+      <ConfirmationDialog
+        open={showDeleteCommentConfirm}
+        onOpenChange={setShowDeleteCommentConfirm}
+        title="Hapus Komentar?"
+        description="Anda yakin ingin menghapus komentar ini? Tindakan ini tidak dapat dibatalkan."
+        onConfirm={confirmDeleteComment}
+        confirmText="Ya, Hapus"
+        cancelText="Batal"
+        variant="destructive"
+      />
     </div>
   );
 }

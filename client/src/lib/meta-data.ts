@@ -11,11 +11,9 @@ export type MetadataOptions = {
   keywords?: string[];
   noSuffix?: boolean;
   image?: string;
+  url?: string;
 };
 
-/**
- * Helper untuk membuat metadata lengkap dengan default yang konsisten
- */
 export function createMetadata({
   title,
   description = APP_DESCRIPTION,
@@ -74,7 +72,6 @@ export function createMetadata({
     formatDetection: {
       telephone: false,
     },
-    // Optional: Untuk PWA
     manifest: "/site.webmanifest",
   };
 }

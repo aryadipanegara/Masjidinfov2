@@ -245,8 +245,11 @@ export function CommentItem({
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   {isOwner && (
-                    <DropdownMenuItem onClick={() => setIsEditing(true)}>
-                      <EditIcon className="h-4 w-4 mr-2" />
+                    <DropdownMenuItem
+                      onClick={() => setIsEditing(true)}
+                      disabled
+                    >
+                      <EditIcon className="h-4 w-4 mr-2 opacity-50" />
                       Edit
                     </DropdownMenuItem>
                   )}

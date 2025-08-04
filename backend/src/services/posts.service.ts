@@ -18,8 +18,8 @@ export const postService = {
     const skip = (page - 1) * limit;
 
     const where: Prisma.PostWhereInput = {
-      isDeleted: false,
-      ...(showAll ? {} : { status }),
+      ...(showAll ? {} : { isDeleted: false, status }),
+
       AND: [
         search
           ? {

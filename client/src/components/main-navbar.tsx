@@ -33,6 +33,7 @@ import useSWR from "swr";
 import { debounce } from "lodash";
 import { Input } from "./ui/input";
 import { LoginDialog } from "./auth/login-dialog";
+import { RegisterDialog } from "./auth/register-dialog";
 
 const navigation = [
   { name: "Beranda", href: "/", icon: HomeIcon },
@@ -48,7 +49,8 @@ export function MainNavbar() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
-  const [loginOpen, setLoginOpen] = useState(false);
+  const [isLoginOpen, setIsLoginOpen] = useState(false); // Renamed for clarity
+  const [isRegisterOpen, setIsRegisterOpen] = useState(false); // New state for RegisterDialog
   const searchRef = useRef<HTMLDivElement>(null);
 
   const { data: searchResults, isLoading: searchLoading } = useSWR(
@@ -75,11 +77,11 @@ export function MainNavbar() {
         setShowSearchResults(false);
       }
     };
-
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // If we are on a dashboard or admin path, don't render the navbar
   if (pathname.startsWith("/dashboard") || pathname.startsWith("/(admin)")) {
     return null;
   }
@@ -116,6 +118,17 @@ export function MainNavbar() {
     setShowSearchResults(false);
   };
 
+  // Functions to switch between login and register dialogs
+  const openLoginDialog = () => {
+    setIsRegisterOpen(false); // Close register dialog if open
+    setIsLoginOpen(true); // Open login dialog
+  };
+
+  const openRegisterDialog = () => {
+    setIsLoginOpen(false); // Close login dialog if open
+    setIsRegisterOpen(true); // Open register dialog
+  };
+
   return (
     <>
       <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -127,7 +140,6 @@ export function MainNavbar() {
               </div>
               <span className="text-xl font-bold">Masjidinfo</span>
             </Link>
-
             {/* Desktop Navigation */}
             <div className="hidden lg:flex lg:items-center lg:space-x-8">
               {navigation.map((item) => {
@@ -146,7 +158,6 @@ export function MainNavbar() {
                 );
               })}
             </div>
-
             {/* Desktop Actions */}
             <div className="hidden lg:flex lg:items-center lg:space-x-4">
               {/* Desktop Search with Dropdown */}
@@ -162,7 +173,6 @@ export function MainNavbar() {
                     className="pl-10 pr-4 h-9"
                   />
                 </div>
-
                 {/* Search Results Dropdown */}
                 {showSearchResults && searchQuery.length >= 3 && (
                   <div className="absolute top-full left-0 right-0 mt-1 bg-background border rounded-md shadow-lg z-50 max-h-80 overflow-y-auto">
@@ -209,7 +219,6 @@ export function MainNavbar() {
                   </div>
                 )}
               </div>
-
               {canCreateEdit && (
                 <Button size="sm" asChild>
                   <Link href="/posts/create">
@@ -218,7 +227,6 @@ export function MainNavbar() {
                   </Link>
                 </Button>
               )}
-
               {/* Desktop User Menu */}
               {loading ? (
                 <div className="h-8 w-8 animate-pulse rounded-full bg-muted" />
@@ -279,18 +287,13 @@ export function MainNavbar() {
                 </DropdownMenu>
               ) : (
                 <div className="flex items-center space-x-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setLoginOpen(true)}
-                  >
+                  <Button variant="ghost" size="sm" onClick={openLoginDialog}>
                     <LogInIcon className="mr-2 h-4 w-4" />
                     Login
                   </Button>
                 </div>
               )}
             </div>
-
             {/* Mobile Actions - Search + Profile */}
             <div className="lg:hidden flex items-center space-x-2">
               {/* Mobile Search Dropdown */}
@@ -324,7 +327,6 @@ export function MainNavbar() {
                         autoFocus
                       />
                     </div>
-
                     {/* Mobile Search Results */}
                     {searchQuery.length >= 3 && (
                       <div className="max-h-60 overflow-y-auto border rounded-md">
@@ -384,7 +386,6 @@ export function MainNavbar() {
                   </div>
                 </DropdownMenuContent>
               </DropdownMenu>
-
               {loading ? (
                 <div className="h-8 w-8 animate-pulse rounded-full bg-muted" />
               ) : user ? (
@@ -461,7 +462,7 @@ export function MainNavbar() {
                     {/* Login (buka modal) */}
                     <DropdownMenuItem
                       className="flex items-center"
-                      onClick={() => setLoginOpen(true)}
+                      onClick={openLoginDialog}
                     >
                       <LogInIcon className="mr-2 h-4 w-4" />
                       Login
@@ -473,7 +474,6 @@ export function MainNavbar() {
           </div>
         </div>
       </nav>
-
       {/* Mobile Bottom Navigation */}
       <div
         className="lg:hidden fixed bottom-0 left-0 right-0 z-50 bg-background border-t shadow-lg"
@@ -487,13 +487,13 @@ export function MainNavbar() {
                 key={item.name}
                 href={item.href}
                 className={`
-            flex flex-col items-center justify-center space-y-1 transition-colors
-            ${
-              isActive
-                ? "text-primary"
-                : "text-muted-foreground hover:text-foreground"
-            }
-          `}
+                  flex flex-col items-center justify-center space-y-1 transition-colors
+                  ${
+                    isActive
+                      ? "text-primary"
+                      : "text-muted-foreground hover:text-foreground"
+                  }
+                `}
                 aria-current={isActive ? "page" : undefined}
               >
                 <item.icon
@@ -505,10 +505,17 @@ export function MainNavbar() {
           })}
         </nav>
       </div>
-
-      <LoginDialog open={loginOpen} onOpenChange={setLoginOpen} />
-
-      {/* <div className="lg:hidden h-16" /> */}
+      {/* Render both dialogs here, passing the state and switch functions */}
+      <LoginDialog
+        open={isLoginOpen}
+        onOpenChange={setIsLoginOpen}
+        onSwitchToRegister={openRegisterDialog}
+      />
+      <RegisterDialog
+        open={isRegisterOpen}
+        onOpenChange={setIsRegisterOpen}
+        onSwitchToLogin={openLoginDialog}
+      />
     </>
   );
 }

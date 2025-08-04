@@ -6,20 +6,33 @@ import { motion } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MapPinIcon, BookOpenIcon } from "lucide-react";
+import {
+  MapPinIcon,
+  BookOpenIcon,
+  CompassIcon,
+  LightbulbIcon,
+  LeafIcon,
+} from "lucide-react"; // Import new icons
 import useSWR from "swr";
 import type { Post } from "@/types/posts.types";
 import { PostService } from "@/service/posts.service";
 import Image from "next/image";
+import { useAuth } from "@/app/providers";
 
 const tabs = [
-  { id: "all", label: "Semua", active: true },
-  { id: "masjid", label: "Masjid", active: false },
-  { id: "artikel", label: "Artikel", active: false },
-];
+  { id: "all", label: "Semua" },
+  { id: "masjid", label: "Masjid" },
+  { id: "sejarah", label: "Sejarah" },
+  { id: "kisah", label: "Kisah" },
+  { id: "ziarah", label: "Ziarah" },
+  { id: "refleksi", label: "Refleksi" },
+  { id: "tradisi", label: "Tradisi" },
+] as const;
 
 export function RecommendationSection() {
-  const [activeTab, setActiveTab] = useState("all");
+  const [activeTab, setActiveTab] =
+    useState<(typeof tabs)[number]["id"]>("all");
+  const { user } = useAuth();
 
   const { data: posts, isLoading } = useSWR(
     `/posts/recommended?type=${activeTab}`,
@@ -33,33 +46,63 @@ export function RecommendationSection() {
     }
   );
 
-  const getPostTypeIcon = (type: string) => {
-    return type === "masjid" ? MapPinIcon : BookOpenIcon;
+  const getPostTypeIcon = (type: Post["type"]) => {
+    switch (type) {
+      case "masjid":
+        return MapPinIcon;
+      case "sejarah":
+        return BookOpenIcon;
+      case "kisah":
+        return BookOpenIcon;
+      case "ziarah":
+        return CompassIcon;
+      case "refleksi":
+        return LightbulbIcon;
+      case "tradisi":
+        return LeafIcon;
+      default:
+        return BookOpenIcon;
+    }
   };
 
-  const getPostTypeColor = (type: string) => {
-    return type === "masjid"
-      ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
-      : "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
+  const getPostTypeColor = (type: Post["type"]) => {
+    switch (type) {
+      case "masjid":
+        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
+      case "sejarah":
+        return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300";
+      case "kisah":
+        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300";
+      case "ziarah":
+        return "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-300";
+      case "refleksi":
+        return "bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-300";
+      case "tradisi":
+        return "bg-rose-100 text-rose-800 dark:bg-rose-900 dark:text-rose-300";
+      default:
+        return "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300";
+    }
   };
+
+  const canViewDraft =
+    user && ["EDITOR", "ADMIN", "SUPER_ADMIN"].includes(user.role);
 
   return (
     <div className="container mx-auto">
       {/* Tabs */}
-      <div className="flex space-x-2 mb-6">
+      <div className="flex space-x-2 mb-6 overflow-x-auto pb-2">
         {tabs.map((tab) => (
           <Button
             key={tab.id}
             variant={activeTab === tab.id ? "default" : "outline"}
             size="sm"
             onClick={() => setActiveTab(tab.id)}
-            className="rounded-full"
+            className="rounded-full flex-shrink-0"
           >
             {tab.label}
           </Button>
         ))}
       </div>
-
       {/* Carousel Container */}
       <div className="relative">
         <div
@@ -79,6 +122,14 @@ export function RecommendationSection() {
                 </div>
               ))
             : posts?.map((post: Post) => {
+                const shouldDisplayPost =
+                  post.status === "PUBLISHED" ||
+                  (post.status === "DRAFT" && canViewDraft);
+
+                if (!shouldDisplayPost) {
+                  return null;
+                }
+
                 const TypeIcon = getPostTypeIcon(post.type);
                 return (
                   <motion.div
@@ -98,11 +149,20 @@ export function RecommendationSection() {
                           sizes="(max-width: 768px) 80vw, (max-width: 1024px) 50vw, 25vw"
                           priority={false}
                         />
-                        <div className="absolute top-2 left-2">
+                        <div className="absolute top-2 left-2 flex flex-wrap gap-1">
                           <Badge className={getPostTypeColor(post.type)}>
                             <TypeIcon className="w-3 h-3 mr-1" />
-                            {post.type === "masjid" ? "Masjid" : "Artikel"}
+                            {post.type.charAt(0).toUpperCase() +
+                              post.type.slice(1)}
                           </Badge>
+                          {post.status === "DRAFT" && (
+                            <Badge
+                              variant="secondary"
+                              className="bg-orange-500 text-white"
+                            >
+                              DRAFT
+                            </Badge>
+                          )}
                         </div>
                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                         <div className="absolute bottom-2 left-2 right-2 text-white">
@@ -127,7 +187,6 @@ export function RecommendationSection() {
               })}
         </div>
       </div>
-
       <style jsx>{`
         .scrollbar-hide {
           -ms-overflow-style: none;
