@@ -106,7 +106,6 @@ export const bookmarkService = {
                   avatar: true,
                 },
               },
-              masjidInfo: true,
             },
           },
         },

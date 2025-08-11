@@ -64,7 +64,6 @@ export const historyService = {
                 avatar: true,
               },
             },
-            masjidInfo: true,
           },
         },
       },

@@ -16,12 +16,13 @@ import {
   SettingsIcon,
   PlayIcon,
   PauseIcon,
-  MenuIcon,
 } from "lucide-react";
 
 interface BottomCenterNavigationProps {
   onBack: () => void;
   showControls: boolean;
+  isEditMode: boolean;
+  isBottomNavAbsolute: boolean; // Prop baru
   relatedPosts?: Array<{
     id: string;
     title: string;
@@ -33,6 +34,8 @@ interface BottomCenterNavigationProps {
 export function BottomCenterNavigation({
   onBack,
   showControls,
+  isEditMode,
+  isBottomNavAbsolute, // Destructure prop baru
 }: BottomCenterNavigationProps) {
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [autoScrollSpeed, setAutoScrollSpeed] = useState([2]);
@@ -63,11 +66,17 @@ export function BottomCenterNavigation({
   return (
     <>
       <div
-        className={`fixed bottom-6 left-1/2 transform -translate-x-1/2 z-40 transition-all duration-300 ${
-          showControls
-            ? "translate-y-0 opacity-100"
-            : "translate-y-full opacity-0"
-        }`}
+        className={`
+          ${
+            isBottomNavAbsolute ? "absolute bottom-0 mb-4" : "fixed bottom-6"
+          } // Posisi kondisional
+          left-1/2 transform -translate-x-1/2 z-40 transition-all duration-300
+          ${
+            showControls && !isEditMode
+              ? "translate-y-0 opacity-100"
+              : "translate-y-full opacity-0"
+          }
+        `}
       >
         <div className="flex items-center gap-3 sm:gap-4">
           {/* Back Button */}

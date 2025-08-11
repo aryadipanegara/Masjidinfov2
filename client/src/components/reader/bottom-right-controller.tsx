@@ -5,10 +5,14 @@ import { ChevronUpIcon, ChevronDownIcon } from "lucide-react";
 
 interface BottomRightControllerProps {
   showControls: boolean;
+  isEditMode: boolean;
+  isScrolledToBottom: boolean; // Prop baru
 }
 
 export function BottomRightController({
   showControls,
+  isEditMode,
+  isScrolledToBottom,
 }: BottomRightControllerProps) {
   const scrollToTop = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -21,7 +25,7 @@ export function BottomRightController({
   return (
     <div
       className={`fixed bottom-20 sm:bottom-24 right-4 sm:right-6 z-50 transition-all duration-300 ${
-        showControls
+        showControls && !isEditMode // Controls are visible only if showControls is true AND not in edit mode
           ? "translate-y-0 opacity-100"
           : "translate-y-full opacity-0"
       }`}
@@ -35,14 +39,17 @@ export function BottomRightController({
         >
           <ChevronUpIcon className="h-5 w-5 sm:h-6 sm:w-6" />
         </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="rounded-full w-11 h-11 sm:w-12 sm:h-12 p-0 bg-white shadow-lg backdrop-blur-sm"
-          onClick={scrollToBottom}
-        >
-          <ChevronDownIcon className="h-5 w-5 sm:h-6 sm:w-6" />
-        </Button>
+        {/* Tombol gulir ke bawah hanya muncul jika TIDAK di bagian paling bawah */}
+        {!isScrolledToBottom && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="rounded-full w-11 h-11 sm:w-12 sm:h-12 p-0 bg-white shadow-lg backdrop-blur-sm"
+            onClick={scrollToBottom}
+          >
+            <ChevronDownIcon className="h-5 w-5 sm:h-6 sm:w-6" />
+          </Button>
+        )}
       </div>
     </div>
   );

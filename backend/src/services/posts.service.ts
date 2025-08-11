@@ -52,7 +52,6 @@ export const postService = {
           author: {
             select: { id: true, fullname: true, email: true, avatar: true },
           },
-          masjidInfo: true,
           _count: { select: { bookmarks: true } },
         },
       }),
@@ -89,7 +88,6 @@ export const postService = {
             avatar: true,
           },
         },
-        masjidInfo: true,
       },
     });
   },
@@ -112,7 +110,6 @@ export const postService = {
             avatar: true,
           },
         },
-        masjidInfo: true,
       },
     });
 

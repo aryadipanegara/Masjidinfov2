@@ -162,7 +162,6 @@ model Post {
 
   categories  PostCategory[]
   images      Image[]
-  masjidInfo  Masjid?
 
   bookmarks     Bookmark[]
   histories     History[]
@@ -210,27 +209,6 @@ model Image {
   uploadedBy   User?    @relation("UserImages", fields: [uploadedById], references: [id], onDelete: SetNull)
 
   @@map("image")
-}
-
-
-model Masjid {
-  id            String   @id @default(ulid())
-  postId        String   @unique @map("post_id")
-
-  namaLokal     String?  @map("nama_lokal")
-  alamat        String?  @map("alamat")
-  kota          String?  @map("kota")
-  provinsi      String?  @map("provinsi")
-  negara        String?  @map("negara")
-  tahunDibangun String?  @map("tahun_dibangun")
-  arsitek       String?  @map("arsitek")
-  gaya          String?  @map("gaya")
-  mapsUrl       String?  @map("maps_url")
-  sumberFoto    String?  @map("sumber_foto")
-
-  post          Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
-
-  @@map("masjid")
 }
 
 model Bookmark {

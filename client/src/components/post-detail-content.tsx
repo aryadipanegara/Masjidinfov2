@@ -1,7 +1,7 @@
 "use client";
 
 import type React from "react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   ArrowLeftIcon,
   CalendarIcon,
   TagIcon,
@@ -32,16 +39,22 @@ import {
   EyeIcon,
 } from "lucide-react";
 import { EditModeToggle } from "@/components/edit-mode-toggle";
-import { MasjidInfoCard } from "@/components/masjid-info-card";
 import { TopCenterNavigation } from "@/components/reader/top-center-navigation";
 import { BottomCenterNavigation } from "@/components/reader/bottom-center-navigation";
 import { BottomRightController } from "@/components/reader/bottom-right-controller";
 import notify from "@/lib/notify";
 import handleErrorResponse from "@/utils/handleErrorResponse";
-import type { Post, UpdatePostPayload } from "@/types/posts.types";
+import type {
+  Post,
+  UpdatePostPayload,
+  PostCategory,
+  PostType,
+  PostStatus,
+} from "@/types/posts.types";
 import { ReadingTime } from "@/components/reading-time";
 import { PostService } from "@/service/posts.service";
 import { ImageService } from "@/service/image.service";
+import { CategoryService } from "@/service/category.service";
 import { fixImageUrlsInHtml } from "@/utils/imageUrlHelper";
 import useSWR from "swr";
 import { useAuth } from "@/app/providers";
@@ -54,31 +67,43 @@ import { ShareModal } from "@/components/share-modal";
 import { ConfirmationDialog } from "@/components/confirmation-dialog";
 
 interface PostDetailContentProps {
-  initialPost: Post; // Receive initial post data from Server Component
+  initialPost: Post;
 }
 
-const fetcher = async (url: string) => {
+const postFetcher = async (url: string) => {
   const slug = url.split("/").pop();
   if (!slug) throw new Error("Slug is missing from URL");
   const response = await PostService.getBySlug(slug);
   return response.data.data;
 };
 
-const MAX_EXCERPT_LENGTH = 180; // Max characters for excerpt before "Read More"
+const categoryFetcher = async () => {
+  const response = await CategoryService.getAll();
+  return response.data.data || [];
+};
+
+const MAX_EXCERPT_LENGTH = 180;
 
 export function PostDetailContent({ initialPost }: PostDetailContentProps) {
   const router = useRouter();
   const { user } = useAuth();
-  const { showControls } = useReaderControls();
+  const { showControls, setShowControls, isScrolledToBottom } =
+    useReaderControls(); // Destructure isScrolledToBottom
 
   const {
     data: post,
     error,
     isLoading,
     mutate,
-  } = useSWR<Post, Error>(`/api/posts/${initialPost.slug}`, fetcher, {
+  } = useSWR<Post, Error>(`/api/posts/${initialPost.slug}`, postFetcher, {
     revalidateOnFocus: false,
-    fallbackData: initialPost, // Use initial data from server
+    fallbackData: initialPost,
+  });
+
+  const { data: categories = [], isLoading: isLoadingCategories } = useSWR<
+    PostCategory[]
+  >("/api/categories", categoryFetcher, {
+    revalidateOnFocus: false,
   });
 
   const [isEditMode, setIsEditMode] = useState(false);
@@ -93,6 +118,10 @@ export function PostDetailContent({ initialPost }: PostDetailContentProps) {
   const [isExcerptExpanded, setIsExcerptExpanded] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showCancelEditConfirm, setShowCancelEditConfirm] = useState(false);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+
+  const commentSectionRef = useRef<HTMLDivElement>(null); // Ref untuk bagian komentar
+  const [isBottomNavAbsolute, setIsBottomNavAbsolute] = useState(false); // State untuk posisi navigasi bawah
 
   const canEdit =
     user && ["EDITOR", "ADMIN", "SUPER_ADMIN"].includes(user.role);
@@ -101,17 +130,49 @@ export function PostDetailContent({ initialPost }: PostDetailContentProps) {
     if (post && !hasChanges) {
       setEditData({
         title: post.title || "",
+        slug: post.slug || "",
         content: post.content,
         excerpt: post.excerpt,
         coverImage: post.coverImage,
         tags: post.tags,
-        viewCount: post.viewCount,
+        type: post.type,
+        status: post.status,
+        categoryIds: post.categories.map((cat) => cat.categoryId),
       });
+      setSelectedCategories(post.categories.map((cat) => cat.categoryId));
       setBookmarkCount(post.bookmarkCount ?? 0);
       setViewCount(post.viewCount ?? 0);
       setRating(4.2 + Math.random() * 0.8);
     }
   }, [post, hasChanges]);
+
+  // Efek untuk mengatur posisi navigasi bawah saat scroll
+  useEffect(() => {
+    const handleScrollPosition = () => {
+      if (commentSectionRef.current) {
+        const commentSectionTop =
+          commentSectionRef.current.getBoundingClientRect().top;
+        const viewportHeight = window.innerHeight;
+        const navHeight = 100; // Perkiraan tinggi navigasi bawah
+
+        // Jika bagian atas komentar sudah masuk ke dalam viewport,
+        // atau jika bagian bawah navigasi fixed akan tumpang tindih dengan komentar
+        // Kita ingin nav menjadi absolute ketika jaraknya 20px dari atas komentar
+        if (commentSectionTop < viewportHeight - navHeight - 20) {
+          setIsBottomNavAbsolute(true);
+        } else {
+          setIsBottomNavAbsolute(false);
+        }
+      }
+    };
+
+    window.addEventListener("scroll", handleScrollPosition);
+    handleScrollPosition(); // Panggil sekali saat mount untuk posisi awal
+
+    return () => {
+      window.removeEventListener("scroll", handleScrollPosition);
+    };
+  }, []);
 
   const confirmCancelEdit = () => {
     setIsEditMode(false);
@@ -119,13 +180,19 @@ export function PostDetailContent({ initialPost }: PostDetailContentProps) {
     if (post) {
       setEditData({
         title: post.title || "",
+        slug: post.slug || "",
         content: post.content,
         excerpt: post.excerpt,
         coverImage: post.coverImage,
         tags: post.tags,
+        type: post.type,
+        status: post.status,
+        categoryIds: post.categories.map((cat) => cat.categoryId),
       });
+      setSelectedCategories(post.categories.map((cat) => cat.categoryId));
     }
     setShowCancelEditConfirm(false);
+    setShowControls(true); // Tampilkan kontrol setelah membatalkan edit
   };
 
   const handleToggleEdit = () => {
@@ -134,9 +201,11 @@ export function PostDetailContent({ initialPost }: PostDetailContentProps) {
         setShowCancelEditConfirm(true);
       } else {
         setIsEditMode(false);
+        setShowControls(true); // Tampilkan kontrol setelah keluar mode edit
       }
     } else {
       setIsEditMode(true);
+      setShowControls(false); // Sembunyikan kontrol saat masuk mode edit
     }
   };
 
@@ -151,6 +220,7 @@ export function PostDetailContent({ initialPost }: PostDetailContentProps) {
       setHasChanges(false);
       notify.dismiss(loadingToastId);
       notify.success(response.data.message);
+      setShowControls(true); // Tampilkan kontrol setelah menyimpan
     } catch (err) {
       handleErrorResponse(err, loadingToastId);
     } finally {
@@ -207,6 +277,16 @@ export function PostDetailContent({ initialPost }: PostDetailContentProps) {
       "tags",
       editData.tags?.filter((tag: string) => tag !== tagToRemove) || []
     );
+  };
+
+  const handleCategoryToggle = (categoryId: string) => {
+    setSelectedCategories((prev) => {
+      const newSelection = prev.includes(categoryId)
+        ? prev.filter((id) => id !== categoryId)
+        : [...prev, categoryId];
+      handleFieldChange("categoryIds", newSelection);
+      return newSelection;
+    });
   };
 
   useEffect(() => {
@@ -285,18 +365,17 @@ export function PostDetailContent({ initialPost }: PostDetailContentProps) {
   const currentUrl = typeof window !== "undefined" ? window.location.href : "";
 
   if (isLoading && !post) {
-    // Only show loading if no initial data or still loading after initial
     return (
       <div className="min-h-screen bg-white">
         <TopCenterNavigation
           title="Loading..."
           subtitle="Memuat konten"
           onBack={() => router.back()}
-          showControls={showControls}
+          showControls={showControls && !isEditMode}
+          isEditMode={isEditMode}
         />
         <div className="pt-20 container mx-auto px-4 py-8 max-w-6xl">
           <div className="animate-pulse space-y-8">
-            {/* Mobile-first loading skeleton */}
             <div className="flex flex-col items-center text-center space-y-6">
               <div className="w-64 sm:w-80 h-80 sm:h-96 bg-gray-200 rounded-lg" />
               <div className="space-y-4 w-full max-w-md">
@@ -321,7 +400,8 @@ export function PostDetailContent({ initialPost }: PostDetailContentProps) {
           title="Post Tidak Ditemukan"
           subtitle="Error"
           onBack={() => router.back()}
-          showControls={showControls}
+          showControls={showControls && !isEditMode}
+          isEditMode={isEditMode}
         />
         <div className="pt-20 container mx-auto px-4 py-8 max-w-4xl text-center">
           <h1 className="text-2xl font-bold mb-4">Post Tidak Ditemukan</h1>
@@ -369,305 +449,77 @@ export function PostDetailContent({ initialPost }: PostDetailContentProps) {
             : "Loading..."
         }
         onBack={() => router.back()}
-        showControls={showControls}
+        showControls={showControls && !isEditMode}
+        isEditMode={isEditMode}
       />
-      <BottomCenterNavigation
-        onBack={() => router.back()}
-        showControls={showControls}
+      <BottomRightController
+        showControls={showControls && !isEditMode}
+        isEditMode={isEditMode}
+        isScrolledToBottom={isScrolledToBottom}
       />
-      <BottomRightController showControls={showControls} />
 
       <div className="pt-20 container mx-auto px-4 py-6 sm:py-8 max-w-6xl">
         <article className="space-y-6 sm:space-y-8">
-          {/* Hero Section - Mobile-First like Reading App */}
+          {/* Hero Section */}
           <div className="flex flex-col lg:flex-row gap-8 lg:gap-12">
-            {/* Mobile Layout - Centered like reference image */}
-            <div className="lg:hidden flex flex-col items-center text-center space-y-6">
-              {/* Cover Image - Centered and prominent */}
-              <div className="relative">
-                {isEditMode ? (
-                  <div className="space-y-4">
-                    <Label className="block text-center">Cover Image</Label>
-                    <div className="flex gap-2 justify-center">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() =>
-                          document.getElementById("cover-upload")?.click()
-                        }
-                        className="flex-1 max-w-xs"
-                      >
-                        <ImageIcon className="mr-2 h-4 w-4" />
-                        {editData.coverImage ? "Ganti Cover" : "Upload Cover"}
-                      </Button>
-                      {editData.coverImage && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleFieldChange("coverImage", "")}
-                        >
-                          <XIcon className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-                    <input
-                      id="cover-upload"
-                      type="file"
-                      accept="image/*"
-                      onChange={handleCoverImageUpload}
-                      className="hidden"
-                    />
-                    {editData.coverImage && (
-                      <div className="relative">
-                        <Image
-                          src={`${editData.coverImage}`}
-                          alt="Cover preview"
-                          width={280}
-                          height={373}
-                          className="w-70 sm:w-80 aspect-[3/4] object-cover rounded-xl shadow-2xl mx-auto"
-                          sizes="(max-width: 640px) 280px, 320px"
-                          priority
-                        />
-                      </div>
-                    )}
-                  </div>
+            {/* Cover Image Section */}
+            <div className="lg:w-80 flex-shrink-0 relative flex flex-col items-center lg:items-start">
+              <label
+                htmlFor="cover-upload-edit"
+                className={`relative w-full max-w-xs sm:max-w-sm lg:max-w-full aspect-[3/4] rounded-xl shadow-2xl overflow-hidden cursor-pointer group ${
+                  isEditMode ? "border-2 border-dashed border-blue-500" : ""
+                }`}
+              >
+                {editData.coverImage ? (
+                  <Image
+                    src={`${editData.coverImage}`}
+                    alt={editData.title || "Cover"}
+                    width={320}
+                    height={427}
+                    className="w-full h-full object-cover"
+                    sizes="(max-width: 640px) 280px, (max-width: 768px) 320px, 320px"
+                    priority
+                  />
                 ) : (
-                  post.coverImage && (
-                    <div className="relative">
-                      <Image
-                        src={`${post.coverImage}`}
-                        alt={post.title || "Cover"}
-                        width={280}
-                        height={373}
-                        className="w-70 sm:w-80 aspect-[3/4] object-cover rounded-xl shadow-2xl mx-auto"
-                        sizes="(max-width: 640px) 280px, 320px"
-                        priority
-                      />
-                    </div>
-                  )
-                )}
-              </div>
-
-              {/* Title - Large and prominent like reference */}
-              {isEditMode ? (
-                <div className="space-y-2 w-full max-w-md">
-                  <Label htmlFor="title-mobile" className="block text-center">
-                    Judul Post
-                  </Label>
-                  <Input
-                    id="title-mobile"
-                    value={editData?.title || ""}
-                    onChange={(e) => handleFieldChange("title", e.target.value)}
-                    className="text-xl font-bold h-auto py-3 text-center"
-                    disabled={isLoading || !post}
-                  />
-                </div>
-              ) : (
-                <div className="space-y-3 max-w-sm">
-                  <h1 className="text-2xl sm:text-3xl font-bold leading-tight text-gray-900">
-                    {post?.title || "Memuat judul..."}
-                  </h1>
-                  {/* Subtitle/Author like reference */}
-                  <p className="text-sm text-gray-600">
-                    Oleh {post.author.fullname}
-                  </p>
-                </div>
-              )}
-
-              {/* Primary Action Button - Removed "Mulai Membaca" */}
-              <div className="w-full max-w-sm space-y-3">
-                {/* Secondary Actions */}
-                <div className="flex gap-3">
-                  <Button
-                    variant="outline"
-                    onClick={handleBookmark}
-                    className={`flex-1 h-11 rounded-xl border-2 ${
-                      isBookmarked
-                        ? "bg-green-50 border-green-200 text-green-700" // Changed bookmark color
-                        : "bg-white border-gray-200 text-gray-700"
-                    }`}
-                  >
-                    <BookmarkIcon
-                      className={`w-4 h-4 mr-2 ${
-                        isBookmarked ? "fill-current" : ""
-                      }`}
-                    />
-                    Bookmark
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="flex-1 h-11 rounded-xl border-2 border-gray-200 bg-transparent"
-                    onClick={() => setShowShareModal(true)} // Open share modal
-                  >
-                    <ShareIcon className="w-4 h-4 mr-2" />
-                    Bagikan
-                  </Button>
-                </div>
-              </div>
-
-              {/* Statistics - Like reference image */}
-              <div className="flex items-center justify-center gap-6 text-sm">
-                <div className="flex items-center gap-1 text-orange-500">
-                  <StarIcon className="w-4 h-4 fill-current" />
-                  <span className="font-medium">{rating.toFixed(1)}</span>
-                </div>
-                <div className="flex items-center gap-1 text-green-500">
-                  {" "}
-                  {/* Changed bookmark icon color to green */}
-                  <BookmarkIcon className="w-4 h-4" />
-                  <span className="font-medium">
-                    {formatNumber(bookmarkCount)}
-                  </span>
-                </div>
-                <div className="flex items-center gap-1 text-gray-500">
-                  <EyeIcon className="w-4 h-4" />
-                  <span className="font-medium">{formatNumber(viewCount)}</span>
-                </div>
-              </div>
-
-              {/* Post Type & Categories */}
-              <div className="flex flex-wrap items-center justify-center gap-2">
-                <Badge className={getPostTypeColor(post.type)}>
-                  <TypeIcon className="w-3 h-3 mr-1" />
-                  {post.type === "masjid"
-                    ? "Masjid"
-                    : post.type === "sejarah"
-                    ? "Sejarah"
-                    : post.type === "kisah"
-                    ? "Kisah"
-                    : post.type === "ziarah"
-                    ? "Ziarah"
-                    : post.type === "refleksi"
-                    ? "Refleksi"
-                    : "Tradisi"}
-                </Badge>
-                {post.categories.map((cat) => (
-                  <Badge key={cat.categoryId} variant="outline">
-                    {cat.category.name}
-                  </Badge>
-                ))}
-              </div>
-
-              {/* Excerpt */}
-              {isEditMode ? (
-                <div className="space-y-2 w-full max-w-md">
-                  <Label htmlFor="excerpt-mobile" className="block text-center">
-                    Excerpt
-                  </Label>
-                  <Textarea
-                    id="excerpt-mobile"
-                    value={editData.excerpt || ""}
-                    onChange={(e) =>
-                      handleFieldChange("excerpt", e.target.value)
-                    }
-                    rows={3}
-                    className="text-center"
-                  />
-                </div>
-              ) : (
-                post.excerpt && (
-                  <div className="text-gray-600 leading-relaxed text-sm max-w-sm">
-                    <p>{displayExcerpt}</p>
-                    {post.excerpt.length > MAX_EXCERPT_LENGTH && (
-                      <Button
-                        variant="link"
-                        onClick={() => setIsExcerptExpanded(!isExcerptExpanded)}
-                        className="p-0 h-auto text-blue-600 hover:text-blue-700"
-                      >
-                        {isExcerptExpanded
-                          ? "Baca Lebih Sedikit"
-                          : "Baca Selengkapnya"}
-                      </Button>
-                    )}
+                  <div className="w-full h-full bg-gray-200 flex items-center justify-center text-gray-500">
+                    <ImageIcon className="w-12 h-12" />
                   </div>
-                )
-              )}
-
-              {/* Edit Mode Toggle for Mobile */}
-              {canEdit && (
-                <div className="w-full max-w-sm">
-                  <EditModeToggle
-                    isEditMode={isEditMode}
-                    onToggleEdit={handleToggleEdit}
-                    onSave={handleSave}
-                    onCancel={handleToggleEdit}
-                    loading={saving}
-                    hasChanges={hasChanges}
-                  />
-                </div>
+                )}
+                {isEditMode && (
+                  <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="text-white text-center">
+                      <ImageIcon className="w-8 h-8 mx-auto mb-2" />
+                      <span className="text-sm font-medium">Ganti Cover</span>
+                    </div>
+                  </div>
+                )}
+                <input
+                  id="cover-upload-edit"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleCoverImageUpload}
+                  className="hidden"
+                  disabled={!isEditMode}
+                />
+              </label>
+              {isEditMode && editData.coverImage && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => handleFieldChange("coverImage", "")}
+                  className="mt-2"
+                >
+                  <XIcon className="h-4 w-4 mr-1" /> Hapus Cover
+                </Button>
               )}
             </div>
 
-            {/* Desktop Layout - Original side-by-side */}
-            <div className="hidden lg:flex lg:gap-8">
-              {/* Cover Image */}
-              <div className="lg:w-80 flex-shrink-0 relative">
-                {isEditMode ? (
-                  <div className="space-y-4">
-                    <Label>Cover Image</Label>
-                    <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() =>
-                          document
-                            .getElementById("cover-upload-desktop")
-                            ?.click()
-                        }
-                        className="flex-1"
-                      >
-                        <ImageIcon className="mr-2 h-4 w-4" />
-                        {editData.coverImage ? "Ganti Cover" : "Upload Cover"}
-                      </Button>
-                      {editData.coverImage && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleFieldChange("coverImage", "")}
-                        >
-                          <XIcon className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-                    <input
-                      id="cover-upload-desktop"
-                      type="file"
-                      accept="image/*"
-                      onChange={handleCoverImageUpload}
-                      className="hidden"
-                    />
-                    {editData.coverImage && (
-                      <Image
-                        src={`${editData.coverImage}`}
-                        alt="Cover preview"
-                        width={320}
-                        height={427}
-                        className="w-full aspect-[3/4] object-cover rounded-lg shadow-lg"
-                        sizes="320px"
-                      />
-                    )}
-                  </div>
-                ) : (
-                  post.coverImage && (
-                    <Image
-                      src={`${post.coverImage}`}
-                      alt={post.title || "Cover"}
-                      width={320}
-                      height={427}
-                      className="w-full aspect-[3/4] object-cover rounded-lg shadow-lg"
-                      sizes="320px"
-                      priority
-                    />
-                  )
-                )}
-              </div>
-
-              {/* Post Info */}
-              <div className="flex-1 space-y-6">
-                {/* Post Type & Categories */}
-                <div className="flex flex-wrap items-center gap-2">
+            {/* Post Info Section */}
+            <div className="flex-1 space-y-6 text-center lg:text-left">
+              {/* Post Type & Categories (Display Only) */}
+              {!isEditMode && (
+                <div className="flex flex-wrap items-center justify-center lg:justify-start gap-2">
                   <Badge className={getPostTypeColor(post.type)}>
                     <TypeIcon className="w-3 h-3 mr-1" />
                     {post.type === "masjid"
@@ -688,151 +540,210 @@ export function PostDetailContent({ initialPost }: PostDetailContentProps) {
                     </Badge>
                   ))}
                 </div>
+              )}
 
-                {/* Title */}
-                {isEditMode ? (
-                  <div className="space-y-2">
-                    <Label htmlFor="title-desktop">Judul Post</Label>
-                    <Input
-                      id="title-desktop"
-                      value={editData?.title || ""}
-                      onChange={(e) =>
-                        handleFieldChange("title", e.target.value)
-                      }
-                      className="text-2xl font-bold h-auto py-3"
-                      disabled={isLoading || !post}
-                    />
-                  </div>
-                ) : (
-                  <h1 className="text-3xl lg:text-4xl font-bold leading-tight">
-                    {post?.title || "Memuat judul..."}
-                  </h1>
-                )}
-
-                {/* Author Info */}
-                <div className="text-muted-foreground">
-                  Oleh {post.author.fullname}
+              {/* Title (Editable in Edit Mode) */}
+              {isEditMode ? (
+                <div className="space-y-2">
+                  <Label htmlFor="edit-title" className="sr-only">
+                    Judul Post
+                  </Label>
+                  <Input
+                    id="edit-title"
+                    value={editData?.title || ""}
+                    onChange={(e) => handleFieldChange("title", e.target.value)}
+                    className="text-2xl sm:text-3xl lg:text-4xl font-bold h-auto py-3 text-center lg:text-left"
+                    disabled={isLoading || !post}
+                  />
                 </div>
+              ) : (
+                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold leading-tight text-gray-900">
+                  {post?.title || "Memuat judul..."}
+                </h1>
+              )}
 
-                {/* Action Buttons */}
-                <div className="flex flex-wrap gap-3">
-                  <Button
-                    variant="outline"
-                    onClick={handleBookmark}
-                    className={
-                      isBookmarked
-                        ? "bg-green-50 border-green-200 text-green-700" // Changed bookmark color
-                        : ""
+              {/* Slug (Editable in Edit Mode) */}
+              {isEditMode && (
+                <div className="space-y-2">
+                  <Label htmlFor="edit-slug" className="sr-only">
+                    Slug (URL)
+                  </Label>
+                  <Input
+                    id="edit-slug"
+                    value={editData?.slug || ""}
+                    onChange={(e) => handleFieldChange("slug", e.target.value)}
+                    placeholder="url-friendly-slug"
+                    className="text-center lg:text-left"
+                  />
+                </div>
+              )}
+
+              {/* Author Info */}
+              <p className="text-sm text-gray-600">
+                Oleh {post.author.fullname}
+              </p>
+
+              {/* Action Buttons */}
+              <div className="flex flex-wrap justify-center lg:justify-start gap-3">
+                <Button
+                  variant="outline"
+                  onClick={handleBookmark}
+                  className={`flex-1 sm:flex-none ${
+                    isBookmarked
+                      ? "bg-green-50 border-green-200 text-green-700"
+                      : "bg-white border-gray-200 text-gray-700"
+                  }`}
+                >
+                  <BookmarkIcon
+                    className={`w-4 h-4 mr-2 ${
+                      isBookmarked ? "fill-current" : ""
+                    }`}
+                  />
+                  Bookmark
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowShareModal(true)}
+                  className="flex-1 sm:flex-none"
+                >
+                  <ShareIcon className="w-4 h-4 mr-2" />
+                  Bagikan
+                </Button>
+                {canEdit && (
+                  <EditModeToggle
+                    isEditMode={isEditMode}
+                    onToggleEdit={handleToggleEdit}
+                    onSave={handleSave}
+                    onCancel={handleToggleEdit}
+                    loading={saving}
+                    hasChanges={hasChanges}
+                  />
+                )}
+              </div>
+
+              {/* Post Type & Status (Editable in Edit Mode - NEW POSITION) */}
+              {isEditMode && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-sm mx-auto lg:mx-0">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-type">Tipe Post</Label>
+                    <Select
+                      value={editData.type as PostType}
+                      onValueChange={(value: PostType) =>
+                        handleFieldChange("type", value)
+                      }
+                    >
+                      <SelectTrigger id="edit-type">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="masjid">Masjid</SelectItem>
+                        <SelectItem value="sejarah">Sejarah</SelectItem>
+                        <SelectItem value="kisah">Kisah</SelectItem>
+                        <SelectItem value="ziarah">Ziarah</SelectItem>
+                        <SelectItem value="refleksi">Refleksi</SelectItem>
+                        <SelectItem value="tradisi">Tradisi</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-status">Status Post</Label>
+                    <Select
+                      value={editData.status as PostStatus}
+                      onValueChange={(value: PostStatus) =>
+                        handleFieldChange("status", value)
+                      }
+                    >
+                      <SelectTrigger id="edit-status">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="DRAFT">Draft</SelectItem>
+                        <SelectItem value="PUBLISHED">Published</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
+
+              {/* Statistics */}
+              <div className="flex items-center justify-center lg:justify-start gap-6 text-sm">
+                <div className="flex items-center gap-1 text-orange-500">
+                  <StarIcon className="w-4 h-4 fill-current" />
+                  <span className="font-medium">{rating.toFixed(1)}</span>
+                </div>
+                <div className="flex items-center gap-1 text-green-500">
+                  <BookmarkIcon className="w-4 h-4" />
+                  <span className="font-medium">
+                    {formatNumber(bookmarkCount)}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1 text-gray-500">
+                  <EyeIcon className="w-4 h-4" />
+                  <span className="font-medium">{formatNumber(viewCount)}</span>
+                </div>
+              </div>
+
+              {/* Excerpt (Editable in Edit Mode) */}
+              {isEditMode ? (
+                <div className="space-y-2">
+                  <Label htmlFor="edit-excerpt" className="sr-only">
+                    Excerpt (Ringkasan)
+                  </Label>
+                  <Textarea
+                    id="edit-excerpt"
+                    value={editData.excerpt || ""}
+                    onChange={(e) =>
+                      handleFieldChange("excerpt", e.target.value)
                     }
-                  >
-                    <BookmarkIcon
-                      className={`w-4 h-4 mr-2 ${
-                        isBookmarked ? "fill-current" : ""
-                      }`}
-                    />
-                    Bookmark
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowShareModal(true)}
-                  >
-                    <ShareIcon className="w-4 h-4 mr-2" />
-                    Share
-                  </Button>
-                  {canEdit && (
-                    <EditModeToggle
-                      isEditMode={isEditMode}
-                      onToggleEdit={handleToggleEdit}
-                      onSave={handleSave}
-                      onCancel={handleToggleEdit}
-                      loading={saving}
-                      hasChanges={hasChanges}
-                    />
-                  )}
+                    placeholder="Tulis ringkasan singkat tentang post ini..."
+                    rows={3}
+                    className="text-center lg:text-left"
+                  />
                 </div>
+              ) : (
+                post.excerpt && (
+                  <div className="text-gray-600 leading-relaxed text-sm max-w-sm mx-auto lg:mx-0">
+                    <p>{displayExcerpt}</p>
+                    {post.excerpt.length > MAX_EXCERPT_LENGTH && (
+                      <Button
+                        variant="link"
+                        onClick={() => setIsExcerptExpanded(!isExcerptExpanded)}
+                        className="p-0 h-auto text-blue-600 hover:text-blue-700"
+                      >
+                        {isExcerptExpanded
+                          ? "Baca Lebih Sedikit"
+                          : "Baca Selengkapnya"}
+                      </Button>
+                    )}
+                  </div>
+                )
+              )}
 
-                {/* Statistics */}
-                <div className="flex flex-wrap items-center gap-6 text-sm">
-                  <div className="flex items-center gap-1 text-yellow-500">
-                    <StarIcon className="w-4 h-4 fill-current" />
-                    <span className="font-medium">{rating.toFixed(1)}</span>
-                  </div>
-                  <div className="flex items-center gap-1 text-green-500">
-                    {" "}
-                    {/* Changed bookmark icon color to green */}
-                    <BookmarkIcon className="w-4 h-4" />
-                    <span className="font-medium">
-                      {formatNumber(bookmarkCount)}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1 text-green-500">
-                    <EyeIcon className="w-4 h-4" />
-                    <span className="font-medium">
-                      {formatNumber(viewCount)}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Excerpt */}
-                {isEditMode ? (
-                  <div className="space-y-2">
-                    <Label htmlFor="excerpt-desktop">Excerpt</Label>
-                    <Textarea
-                      id="excerpt-desktop"
-                      value={editData.excerpt || ""}
-                      onChange={(e) =>
-                        handleFieldChange("excerpt", e.target.value)
+              {/* Meta Info */}
+              <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 text-sm text-muted-foreground">
+                <div className="flex items-center gap-2">
+                  <Avatar className="h-6 w-6">
+                    <AvatarImage
+                      src={
+                        post.author.avatar ||
+                        "/placeholder.svg?height=24&width=24&query=user avatar"
                       }
-                      rows={3}
+                      alt={post.author.fullname}
                     />
-                  </div>
-                ) : (
-                  post.excerpt && (
-                    <div className="text-muted-foreground leading-relaxed">
-                      <p>{displayExcerpt}</p>
-                      {post.excerpt.length > MAX_EXCERPT_LENGTH && (
-                        <Button
-                          variant="link"
-                          onClick={() =>
-                            setIsExcerptExpanded(!isExcerptExpanded)
-                          }
-                          className="p-0 h-auto text-blue-600 hover:text-blue-700"
-                        >
-                          {isExcerptExpanded
-                            ? "Baca Lebih Sedikit"
-                            : "Baca Selengkapnya"}
-                        </Button>
-                      )}
-                    </div>
-                  )
-                )}
-
-                {/* Meta Info */}
-                <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-                  <div className="flex items-center gap-2">
-                    <Avatar className="h-6 w-6">
-                      <AvatarImage
-                        src={
-                          post.author.avatar ||
-                          "/placeholder.svg?height=24&width=24&query=user avatar"
-                        }
-                        alt={post.author.fullname}
-                      />
-                      <AvatarFallback className="text-xs">
-                        {post.author.fullname
-                          .split(" ")
-                          .map((n) => n[0])
-                          .join("")}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span>{post.author.fullname}</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <CalendarIcon className="h-4 w-4" />
-                    <span>Dipublikasikan {formatDate(post.publishedAt)}</span>
-                  </div>
-                  <ReadingTime content={post.content} />
+                    <AvatarFallback className="text-xs">
+                      {post.author.fullname
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span>{post.author.fullname}</span>
                 </div>
+                <div className="flex items-center gap-1">
+                  <CalendarIcon className="h-4 w-4" />
+                  <span>Dipublikasikan {formatDate(post.publishedAt)}</span>
+                </div>
+                <ReadingTime content={post.content} />
               </div>
             </div>
           </div>
@@ -859,6 +770,42 @@ export function PostDetailContent({ initialPost }: PostDetailContentProps) {
               />
             )}
           </div>
+
+          {/* Categories (Editable in Edit Mode) */}
+          {isEditMode && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Kategori</CardTitle>
+                <CardDescription>
+                  Pilih kategori yang sesuai dengan post ini
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isLoadingCategories ? (
+                  <div className="text-muted-foreground">
+                    Memuat kategori...
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {categories.map((category: PostCategory) => (
+                      <Badge
+                        key={category.id}
+                        variant={
+                          selectedCategories.includes(category.id)
+                            ? "default"
+                            : "outline"
+                        }
+                        className="cursor-pointer"
+                        onClick={() => handleCategoryToggle(category.id)}
+                      >
+                        {category.name}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Tags */}
           {isEditMode ? (
@@ -916,10 +863,19 @@ export function PostDetailContent({ initialPost }: PostDetailContentProps) {
             )
           )}
 
-          {/* Masjid Info (if applicable) */}
-          {post.type === "masjid" && <MasjidInfoCard post={post} />}
+          <div className="relative w-full flex justify-center">
+            <BottomCenterNavigation
+              onBack={() => router.back()}
+              showControls={showControls && !isEditMode}
+              isEditMode={isEditMode}
+              isBottomNavAbsolute={isBottomNavAbsolute}
+            />
+          </div>
 
-          <CommentSection postId={post.id} />
+          {/* Comment Section dengan ref */}
+          <div ref={commentSectionRef}>
+            <CommentSection postId={post.id} />
+          </div>
         </article>
       </div>
 
