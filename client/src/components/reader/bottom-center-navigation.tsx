@@ -68,8 +68,8 @@ export function BottomCenterNavigation({
       <div
         className={`
           ${
-            isBottomNavAbsolute ? "absolute bottom-0 mb-4" : "fixed bottom-6"
-          } // Posisi kondisional
+            isBottomNavAbsolute ? "absolute bottom-0" : "fixed bottom-6"
+          } // Removed mb-4 here
           left-1/2 transform -translate-x-1/2 z-40 transition-all duration-300
           ${
             showControls && !isEditMode

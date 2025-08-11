@@ -3,14 +3,144 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 
 export function useReaderControls() {
-  const [isManuallyToggled, setIsManuallyToggled] = useState(false); // Status toggle manual oleh klik/sentuh
-  const [isScrolledToBottom, setIsScrolledToBottom] = useState(false); // Status apakah sedang di bagian commentar atau tidak
-  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const lastClickTimeRef = useRef(0); // Untuk debounce scroll setelah klik
+  const [isUserExplicitlyVisible, setIsUserExplicitlyVisible] = useState<
+    boolean | null
+  >(null);
+  const [isScrolledToBottom, setIsScrolledToBottom] = useState(false);
 
-  // Fungsi untuk memeriksa posisi gulir dan memperbarui isScrolledToBottom
+  const autoHideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const scrollDebounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastTouchTimeRef = useRef<number>(0);
+  const touchStartYRef = useRef<number>(0);
+  const isScrollingRef = useRef<boolean>(false);
+
+  const HIDE_DELAY = 3000; // 3 seconds of inactivity to hide
+  const SCROLL_THRESHOLD = 10; // Minimum scroll distance to consider as scrolling
+
+  const resetAutoHideTimer = useCallback(() => {
+    if (autoHideTimeoutRef.current) {
+      clearTimeout(autoHideTimeoutRef.current);
+    }
+    if (isUserExplicitlyVisible === null && !isScrolledToBottom) {
+      autoHideTimeoutRef.current = setTimeout(() => {
+        setIsUserExplicitlyVisible(false);
+      }, HIDE_DELAY);
+    }
+  }, [isUserExplicitlyVisible, isScrolledToBottom]);
+
+  // Handle touch start - record position and time
+  const handleTouchStart = useCallback((e: TouchEvent) => {
+    touchStartYRef.current = e.touches[0].clientY;
+    isScrollingRef.current = false;
+  }, []);
+
+  // Handle touch move - detect if user is scrolling
+  const handleTouchMove = useCallback((e: TouchEvent) => {
+    const touchY = e.touches[0].clientY;
+    const deltaY = Math.abs(touchY - touchStartYRef.current);
+
+    if (deltaY > SCROLL_THRESHOLD) {
+      isScrollingRef.current = true;
+    }
+  }, []);
+
+  // Handle touch end - only toggle if not scrolling
+  const handleTouchEnd = useCallback(
+    (e: TouchEvent) => {
+      // Prevent if user was scrolling
+      if (isScrollingRef.current) {
+        return;
+      }
+
+      // Prevent rapid touches
+      const now = Date.now();
+      if (now - lastTouchTimeRef.current < 300) {
+        return;
+      }
+      lastTouchTimeRef.current = now;
+
+      // Check if touch target is interactive element
+      const target = e.target as HTMLElement;
+      if (
+        target &&
+        (target.tagName === "BUTTON" ||
+          target.tagName === "A" ||
+          target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.closest("button") ||
+          target.closest("a") ||
+          target.closest('[role="button"]') ||
+          target.closest(".tiptap") ||
+          target.closest(".ProseMirror") ||
+          target.closest("[data-tiptap-editor]") ||
+          target.closest(".editor-content"))
+      ) {
+        return;
+      }
+
+      if (isScrolledToBottom) {
+        setIsUserExplicitlyVisible(true);
+        if (autoHideTimeoutRef.current)
+          clearTimeout(autoHideTimeoutRef.current);
+        return;
+      }
+
+      // Toggle visibility
+      setIsUserExplicitlyVisible((prev) => {
+        if (prev === null) {
+          return true;
+        }
+        return !prev;
+      });
+
+      resetAutoHideTimer();
+    },
+    [isScrolledToBottom, resetAutoHideTimer]
+  );
+
+  // Handle desktop clicks
+  const handleClick = useCallback(
+    (e: MouseEvent) => {
+      // Check if click target is interactive element
+      const target = e.target as HTMLElement;
+      if (
+        target &&
+        (target.tagName === "BUTTON" ||
+          target.tagName === "A" ||
+          target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.closest("button") ||
+          target.closest("a") ||
+          target.closest('[role="button"]') ||
+          target.closest(".tiptap") ||
+          target.closest(".ProseMirror") ||
+          target.closest("[data-tiptap-editor]") ||
+          target.closest(".editor-content"))
+      ) {
+        return;
+      }
+
+      if (isScrolledToBottom) {
+        setIsUserExplicitlyVisible(true);
+        if (autoHideTimeoutRef.current)
+          clearTimeout(autoHideTimeoutRef.current);
+        return;
+      }
+
+      setIsUserExplicitlyVisible((prev) => {
+        if (prev === null) {
+          return true;
+        }
+        return !prev;
+      });
+
+      resetAutoHideTimer();
+    },
+    [isScrolledToBottom, resetAutoHideTimer]
+  );
+
   const checkScrollPosition = useCallback(() => {
-    const threshold = 200; // Jarak piksel dari bawah untuk dianggap "di bagian commentar"
+    const threshold = 200;
     const currentScrollY = window.scrollY;
     const viewportHeight = window.innerHeight;
     const documentHeight = document.body.scrollHeight;
@@ -18,74 +148,92 @@ export function useReaderControls() {
     const atBottom =
       currentScrollY + viewportHeight >= documentHeight - threshold;
     setIsScrolledToBottom(atBottom);
-  }, []);
 
-  // Fungsi untuk menangani interaksi klik/sentuh
-  const handleClickOrTouch = useCallback(() => {
-    // Jika sedang di bagian bawah halaman, klik/sentuh tidak akan men-toggle visibilitas
-    // Kontrol akan tetap terlihat karena isScrolledToBottom akan TRUE
-    if (isScrolledToBottom) {
-      return; // Jangan lakukan apa-apa jika sudah di bagian bawah
-    }
-
-    // Jika tidak di bagian bawah, toggle visibilitas manual
-    setIsManuallyToggled((prev) => !prev);
-    lastClickTimeRef.current = Date.now(); // Catat waktu klik terakhir
-  }, [isScrolledToBottom]);
-
-  // Fungsi untuk menangani event gulir
-  const handleScroll = useCallback(() => {
-    // Jangan sembunyikan kontrol jika baru saja diklik (dalam waktu singkat)
-    if (Date.now() - lastClickTimeRef.current < 300) {
-      // 300ms debounce setelah klik
-      return;
-    }
-
-    if (scrollTimeoutRef.current) {
-      clearTimeout(scrollTimeoutRef.current);
-    }
-    scrollTimeoutRef.current = setTimeout(() => {
-      checkScrollPosition();
-      // Jika tidak di bagian bawah DAN kontrol tidak di-toggle manual, sembunyikan
-      // Ini akan membuat kontrol auto-hide saat scroll jika tidak di bagian bawah
-      // dan tidak di-toggle manual.
-      if (!isScrolledToBottom && isManuallyToggled) {
-        // Only hide if manually toggled ON and not at bottom
-        setIsManuallyToggled(false);
+    if (atBottom) {
+      setIsUserExplicitlyVisible(true);
+      if (autoHideTimeoutRef.current) clearTimeout(autoHideTimeoutRef.current);
+    } else {
+      if (isUserExplicitlyVisible !== false) {
+        resetAutoHideTimer();
       }
-    }, 100); // Debounce scroll checks
-  }, [checkScrollPosition, isScrolledToBottom, isManuallyToggled]); // Tambahkan isManuallyToggled sebagai dependency
+    }
+  }, [isUserExplicitlyVisible, resetAutoHideTimer]);
+
+  const handleScroll = useCallback(() => {
+    if (scrollDebounceTimeoutRef.current) {
+      clearTimeout(scrollDebounceTimeoutRef.current);
+    }
+    scrollDebounceTimeoutRef.current = setTimeout(() => {
+      checkScrollPosition();
+    }, 100);
+  }, [checkScrollPosition]);
 
   useEffect(() => {
-    // Lakukan pemeriksaan posisi awal saat komponen dimuat
     checkScrollPosition();
+    resetAutoHideTimer();
 
-    // Tambahkan event listener
-    document.addEventListener("click", handleClickOrTouch);
-    document.addEventListener("touchstart", handleClickOrTouch);
+    // Use different events for mobile and desktop
+    const isMobile =
+      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+        navigator.userAgent
+      );
+
+    if (isMobile) {
+      // Mobile: Use touch events
+      document.addEventListener("touchstart", handleTouchStart, {
+        passive: true,
+      });
+      document.addEventListener("touchmove", handleTouchMove, {
+        passive: true,
+      });
+      document.addEventListener("touchend", handleTouchEnd, { passive: true });
+    } else {
+      // Desktop: Use click events
+      document.addEventListener("click", handleClick);
+    }
+
     document.addEventListener("scroll", handleScroll, { passive: true });
 
-    // Cleanup function untuk menghapus event listener
     return () => {
-      document.removeEventListener("click", handleClickOrTouch);
-      document.removeEventListener("touchstart", handleClickOrTouch);
-      document.removeEventListener("scroll", handleScroll);
-      if (scrollTimeoutRef.current) {
-        clearTimeout(scrollTimeoutRef.current);
+      if (isMobile) {
+        document.removeEventListener("touchstart", handleTouchStart);
+        document.removeEventListener("touchmove", handleTouchMove);
+        document.removeEventListener("touchend", handleTouchEnd);
+      } else {
+        document.removeEventListener("click", handleClick);
       }
+      document.removeEventListener("scroll", handleScroll);
+      if (autoHideTimeoutRef.current) clearTimeout(autoHideTimeoutRef.current);
+      if (scrollDebounceTimeoutRef.current)
+        clearTimeout(scrollDebounceTimeoutRef.current);
     };
-  }, [handleClickOrTouch, handleScroll, checkScrollPosition]);
+  }, [
+    handleTouchStart,
+    handleTouchMove,
+    handleTouchEnd,
+    handleClick,
+    handleScroll,
+    checkScrollPosition,
+    resetAutoHideTimer,
+  ]);
 
-  // Status `showControls` yang akan dikembalikan:
-  // Kontrol akan terlihat jika di-toggle secara manual ATAU jika sedang di bagian bawah halaman
-  const derivedShowControls = isManuallyToggled || isScrolledToBottom;
+  const derivedShowControls =
+    isScrolledToBottom ||
+    isUserExplicitlyVisible === true ||
+    isUserExplicitlyVisible === null;
 
-  // Fungsi setter yang diekspos untuk kontrol eksternal (misalnya dari mode edit)
-  const externalSetShowControls = useCallback((value: boolean) => {
-    // Ketika diatur secara eksternal, ini akan menimpa status toggle manual
-    setIsManuallyToggled(value);
-    // isScrolledToBottom tidak diatur di sini karena itu tergantung pada posisi gulir aktual
-  }, []);
+  const externalSetShowControls = useCallback(
+    (value: boolean) => {
+      setIsUserExplicitlyVisible(value);
+      if (value) {
+        resetAutoHideTimer();
+      } else {
+        if (autoHideTimeoutRef.current)
+          clearTimeout(autoHideTimeoutRef.current);
+      }
+    },
+    [resetAutoHideTimer]
+  );
 
   return {
     showControls: derivedShowControls,

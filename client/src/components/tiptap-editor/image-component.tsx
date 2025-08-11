@@ -22,12 +22,14 @@ interface ImageNodeViewProps extends Omit<NodeViewProps, "node"> {
   node: Node & {
     attrs: ImageNodeAttributes;
   };
+  readOnly?: boolean;
 }
 
 export const ImageComponent = ({
   node,
   updateAttributes,
   deleteNode,
+  readOnly = false,
 }: ImageNodeViewProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [caption, setCaption] = useState(node.attrs.caption || "");
@@ -40,6 +42,15 @@ export const ImageComponent = ({
   });
 
   const resizeRef = useRef<HTMLDivElement>(null);
+
+  // Log the readOnly prop to debug
+  useEffect(() => {
+    console.log("ImageComponent: readOnly prop is", readOnly);
+    // If readOnly becomes true, ensure we are not in editing mode
+    if (readOnly && isEditing) {
+      setIsEditing(false);
+    }
+  }, [readOnly, isEditing]);
 
   const handleSave = () => {
     updateAttributes({
@@ -56,6 +67,8 @@ export const ImageComponent = ({
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
+    if (readOnly) return; // Prevent resizing in readOnly mode
+
     e.preventDefault();
     setIsResizing(true);
     const startX = e.clientX;
@@ -132,7 +145,12 @@ export const ImageComponent = ({
 
   return (
     <NodeViewWrapper className="my-4 text-center">
-      <div className="relative group border rounded-lg overflow-hidden max-w-[600px] mx-auto">
+      {/* Apply 'group' class only if not readOnly */}
+      <div
+        className={`relative border rounded-lg overflow-hidden max-w-[600px] mx-auto ${
+          !readOnly ? "group" : ""
+        }`}
+      >
         {/* Resizable Image Display */}
         <div
           className="relative inline-block"
@@ -168,20 +186,22 @@ export const ImageComponent = ({
             }}
           />
 
-          {/* Resize Handle */}
-          <div
-            ref={resizeRef}
-            className={`absolute bottom-0 right-0 w-4 h-4 bg-blue-500 border-2 border-white rounded-full cursor-se-resize opacity-0 group-hover:opacity-100 transition-opacity ${
-              isResizing ? "opacity-100" : ""
-            }`}
-            onMouseDown={handleMouseDown}
-            style={{
-              transform: "translate(50%, 50%)",
-            }}
-          />
+          {/* Resize Handle - only show when not readOnly */}
+          {!readOnly && (
+            <div
+              ref={resizeRef}
+              className={`absolute bottom-0 right-0 w-4 h-4 bg-blue-500 border-2 border-white rounded-full cursor-se-resize opacity-0 group-hover:opacity-100 transition-opacity ${
+                isResizing ? "opacity-100" : ""
+              }`}
+              onMouseDown={handleMouseDown}
+              style={{
+                transform: "translate(50%, 50%)",
+              }}
+            />
+          )}
 
-          {/* Size Indicator */}
-          {(isResizing || isEditing) && (
+          {/* Size Indicator - only show when editing or resizing */}
+          {!readOnly && (isResizing || isEditing) && (
             <div className="absolute top-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
               {Math.round(imageSize.width)} × {Math.round(imageSize.height)}
             </div>
@@ -194,17 +214,29 @@ export const ImageComponent = ({
             </div>
           )}
 
-          {/* Action Buttons */}
-          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          {/* Action Buttons - visibility controlled by readOnly and isEditing */}
+          <div
+            className={`absolute top-2 right-2 transition-opacity ${
+              !readOnly && !isEditing
+                ? "opacity-0 group-hover:opacity-100"
+                : "opacity-0 pointer-events-none"
+            }`}
+          >
             <div className="flex gap-2">
               <Button
                 size="sm"
                 variant="secondary"
-                onClick={() => setIsEditing(!isEditing)}
+                onClick={() => setIsEditing(true)}
+                disabled={readOnly}
               >
                 <Edit3 className="w-4 h-4" />
               </Button>
-              <Button size="sm" variant="destructive" onClick={deleteNode}>
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={deleteNode}
+                disabled={readOnly}
+              >
                 <Trash2 className="w-4 h-4" />
               </Button>
             </div>
@@ -220,8 +252,8 @@ export const ImageComponent = ({
           </div>
         )}
 
-        {/* Edit Form */}
-        {isEditing && (
+        {/* Edit Form - only show when editing and not readOnly */}
+        {isEditing && !readOnly && (
           <div className="p-4 bg-gray-50 border-t space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -269,8 +301,8 @@ export const ImageComponent = ({
           </div>
         )}
 
-        {/* Add Caption Button (when not editing and no caption) */}
-        {!isEditing && !node.attrs.caption && (
+        {/* Add Caption Button - only show when not editing, no caption, and not readOnly */}
+        {!isEditing && !node.attrs.caption && !readOnly && (
           <div className="p-2 bg-gray-50 border-t text-center">
             <Button
               size="sm"
