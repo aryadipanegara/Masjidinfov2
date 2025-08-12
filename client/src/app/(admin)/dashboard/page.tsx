@@ -15,142 +15,92 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "@/components/ui/chart";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Area,
-  AreaChart,
-  Bar,
-  BarChart,
-  Line,
-  LineChart,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-} from "recharts";
-import useSWR from "swr";
-import { PostService } from "@/service/posts.service";
-import { UserService } from "@/service/users.service";
-import { AnnouncementService } from "@/service/announcement.service";
-import { CommentService } from "@/service/comment.service";
-
-interface DashboardStats {
-  totalUsers: number;
-  totalPosts: number;
-  totalComments: number;
-  activeUsers: number;
-  userGrowth: number;
-  postGrowth: number;
-  commentGrowth: number;
-  activeGrowth: number;
-}
-
-interface RecentPost {
-  id: string;
-  title: string;
-  author: {
-    name: string;
-    avatar?: string;
-  };
-  createdAt: string;
-  status: string;
-  views?: number;
-}
-
-interface RecentComment {
-  id: string;
-  content: string;
-  author: {
-    name: string;
-    avatar?: string;
-  };
-  postTitle: string;
-  createdAt: string;
-}
-
-interface Announcement {
-  id: string;
-  content: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-const chartConfig = {
-  users: {
-    label: "Users",
-    color: "hsl(var(--chart-1))",
-  },
-  posts: {
-    label: "Posts",
-    color: "hsl(var(--chart-2))",
-  },
-  comments: {
-    label: "Comments",
-    color: "hsl(var(--chart-3))",
-  },
-};
-
-// SWR fetcher functions
-const fetchDashboardData = async () => {
-  const [postsResponse, usersResponse, announcementsResponse] =
-    await Promise.all([
-      PostService.getAll({ limit: 10 }),
-      UserService.getUsers({ limit: 10 }),
-      AnnouncementService.getAll({ limit: 5 }),
-    ]);
-
-  return {
-    posts: postsResponse.data,
-    users: usersResponse.data,
-    announcements: announcementsResponse.data,
-  };
-};
-
-const fetchCommentsForPost = async (postId: string) => {
-  if (!postId) return { data: [] };
-  const response = await CommentService.getByPostId(postId, { limit: 5 });
-  return response.data;
-};
+import { useState, useEffect } from "react";
+import AxiosInstance from "@/lib/axios";
+import { Post } from "@/types/posts.types";
+import { Comment } from "@/types/comment.types";
+import { Announcement } from "@/types/announcement.types";
+import { UserDetail } from "@/types/user.types";
 
 export default function AdminDashboardPage() {
-  // Mock chart data - you can replace this with real historical data if available
-  const mockChartData = [
-    { month: "Jan", users: 186, posts: 80, comments: 120 },
-    { month: "Feb", users: 305, posts: 200, comments: 180 },
-    { month: "Mar", users: 237, posts: 120, comments: 150 },
-    { month: "Apr", users: 273, posts: 190, comments: 200 },
-    { month: "May", users: 209, posts: 130, comments: 170 },
-    { month: "Jun", users: 314, posts: 140, comments: 220 },
-  ];
-
-  // SWR hooks for data fetching
-  const {
-    data: dashboardData,
-    error: dashboardError,
-    isLoading: dashboardLoading,
-  } = useSWR("dashboard-data", fetchDashboardData, {
-    refreshInterval: 30000, // Refresh every 30 seconds
-    revalidateOnFocus: true,
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    totalPosts: 0,
+    totalComments: 0,
+    activeUsers: 0,
   });
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
 
-  // Get first post ID for comments
-  const firstPostId = dashboardData?.posts?.data?.[0]?.id;
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setIsLoading(true);
+        setError(null);
 
-  const { data: commentsData, error: commentsError } = useSWR(
-    firstPostId ? `comments-${firstPostId}` : null,
-    () => fetchCommentsForPost(firstPostId),
-    {
-      refreshInterval: 60000, // Refresh every minute
-    }
-  );
+        // Using direct API calls instead of service imports to avoid module resolution issues
+        const [
+          usersResponse,
+          postsResponse,
+          commentsResponse,
+          announcementsResponse,
+        ] = await Promise.all([
+          AxiosInstance.get("/users", { params: { page: 1, limit: 100 } }),
+          AxiosInstance.get("/posts", { params: { page: 1, limit: 10 } }),
+          AxiosInstance.get("/comments", { params: { page: 1, limit: 10 } }),
+          AxiosInstance.get("/announcement", { params: { page: 1, limit: 5 } }),
+        ]);
+
+        const usersData = usersResponse.data;
+        const totalUsers =
+          usersData.paginations?.total || usersData.data?.length || 0;
+        const activeUsers =
+          usersData.data?.filter((user: UserDetail) => user.status === "ACTIVE")
+            ?.length || 0;
+
+        const postsData = postsResponse.data;
+        const totalPosts =
+          postsData.pagination?.total || postsData.data?.length || 0;
+        const recentPosts = postsData.data || [];
+
+        const commentsData = commentsResponse.data;
+        const totalComments =
+          commentsData.pagination?.total || commentsData.data?.length || 0;
+        const recentComments = commentsData.data || [];
+
+        const announcementsData = announcementsResponse.data;
+        const recentAnnouncements = announcementsData.data || [];
+
+        setStats({
+          totalUsers,
+          totalPosts,
+          totalComments,
+          activeUsers,
+        });
+
+        setPosts(recentPosts);
+        setComments(recentComments);
+        setAnnouncements(recentAnnouncements);
+      } catch (err) {
+        console.error("Dashboard data fetch error:", err);
+        setError(
+          "Gagal memuat data dashboard. Pastikan API URL sudah dikonfigurasi dengan benar."
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("id-ID", {
@@ -161,70 +111,13 @@ export default function AdminDashboardPage() {
     });
   };
 
-  // Transform data
-  const stats: DashboardStats = dashboardData
-    ? {
-        totalUsers: dashboardData.users.pagination?.totalItems || 0,
-        totalPosts: dashboardData.posts.pagination?.totalItems || 0,
-        totalComments: 0, // You might need to add a separate endpoint for total comments
-        activeUsers: Math.floor(
-          (dashboardData.users.pagination?.totalItems || 0) * 0.1
-        ), // Estimate 10% active
-        userGrowth: 20.1, // You can calculate this from historical data
-        postGrowth: 12.5,
-        commentGrowth: 8.3,
-        activeGrowth: 5.2,
-      }
-    : {
-        totalUsers: 0,
-        totalPosts: 0,
-        totalComments: 0,
-        activeUsers: 0,
-        userGrowth: 0,
-        postGrowth: 0,
-        commentGrowth: 0,
-        activeGrowth: 0,
-      };
-
-  // Transform posts data
-  const recentPosts: RecentPost[] =
-    dashboardData?.posts?.data?.map((post: any) => ({
-      id: post.id,
-      title: post.title,
-      author: {
-        name: post.author?.name || post.user?.name || "Unknown Author",
-        avatar: post.author?.avatar || post.user?.avatar,
-      },
-      createdAt: post.createdAt,
-      status: post.status || "published",
-      views: post.views || 0,
-    })) || [];
-
-  // Transform comments data
-  const recentComments: RecentComment[] =
-    commentsData?.data?.map((comment: any) => ({
-      id: comment.id,
-      content: comment.content,
-      author: {
-        name: comment.author?.name || comment.user?.name || "Anonymous",
-        avatar: comment.author?.avatar || comment.user?.avatar,
-      },
-      postTitle: dashboardData?.posts?.data?.[0]?.title || "Unknown Post",
-      createdAt: comment.createdAt,
-    })) || [];
-
-  // Transform announcements data
-  const announcements: Announcement[] =
-    dashboardData?.announcements?.data || dashboardData?.announcements || [];
-
-  if (dashboardLoading) {
+  if (isLoading) {
     return (
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
         <div className="flex items-center justify-between space-y-2">
           <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
         </div>
 
-        {/* Loading skeletons */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => (
             <Card key={i}>
@@ -239,49 +132,27 @@ export default function AdminDashboardPage() {
             </Card>
           ))}
         </div>
-
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-          <Card className="col-span-4">
-            <CardHeader>
-              <Skeleton className="h-6 w-[200px]" />
-              <Skeleton className="h-4 w-[300px]" />
-            </CardHeader>
-            <CardContent>
-              <Skeleton className="h-[300px] w-full" />
-            </CardContent>
-          </Card>
-          <Card className="col-span-3">
-            <CardHeader>
-              <Skeleton className="h-6 w-[150px]" />
-              <Skeleton className="h-4 w-[250px]" />
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {Array.from({ length: 6 }).map((_, i) => (
-                  <div key={i} className="flex items-center space-x-3">
-                    <Skeleton className="h-8 w-8 rounded-full" />
-                    <div className="space-y-2 flex-1">
-                      <Skeleton className="h-4 w-full" />
-                      <Skeleton className="h-3 w-[60%]" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
       </div>
     );
   }
 
-  if (dashboardError) {
+  if (error) {
     return (
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
+        <div className="flex items-center justify-between space-y-2">
+          <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
+        </div>
+
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Error</AlertTitle>
           <AlertDescription>
-            Failed to load dashboard data. Please try refreshing the page.
+            {error}
+            <br />
+            <small className="text-xs opacity-75">
+              Periksa pengaturan environment variable NEXT_PUBLIC_API_URL di
+              Project Settings.
+            </small>
           </AlertDescription>
         </Alert>
       </div>
@@ -294,7 +165,7 @@ export default function AdminDashboardPage() {
         <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
       </div>
 
-      {/* Announcements */}
+      {/* Using real announcements data with message field */}
       {announcements.length > 0 && (
         <div className="space-y-4">
           {announcements.slice(0, 2).map((announcement) => (
@@ -302,7 +173,7 @@ export default function AdminDashboardPage() {
               <Activity className="h-4 w-4" />
               <AlertTitle>Pengumuman</AlertTitle>
               <AlertDescription>
-                {announcement.content}
+                {announcement.message}
                 <span className="block text-xs text-muted-foreground mt-1">
                   {formatDate(announcement.createdAt)}
                 </span>
@@ -312,7 +183,6 @@ export default function AdminDashboardPage() {
         </div>
       )}
 
-      {/* Statistics Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -325,10 +195,7 @@ export default function AdminDashboardPage() {
             <div className="text-2xl font-bold">
               {stats.totalUsers.toLocaleString()}
             </div>
-            <p className="text-xs text-muted-foreground">
-              <span className="text-green-600">+{stats.userGrowth}%</span> dari
-              bulan lalu
-            </p>
+            <p className="text-xs text-muted-foreground">Pengguna terdaftar</p>
           </CardContent>
         </Card>
 
@@ -344,8 +211,7 @@ export default function AdminDashboardPage() {
               {stats.totalPosts.toLocaleString()}
             </div>
             <p className="text-xs text-muted-foreground">
-              <span className="text-green-600">+{stats.postGrowth}%</span> dari
-              bulan lalu
+              Postingan dipublikasikan
             </p>
           </CardContent>
         </Card>
@@ -362,8 +228,7 @@ export default function AdminDashboardPage() {
               {stats.totalComments.toLocaleString()}
             </div>
             <p className="text-xs text-muted-foreground">
-              <span className="text-green-600">+{stats.commentGrowth}%</span>{" "}
-              dari bulan lalu
+              Komentar dari pengguna
             </p>
           </CardContent>
         </Card>
@@ -378,61 +243,14 @@ export default function AdminDashboardPage() {
           <CardContent>
             <div className="text-2xl font-bold">{stats.activeUsers}</div>
             <p className="text-xs text-muted-foreground">
-              <span className="text-green-600">+{stats.activeGrowth}%</span>{" "}
-              dari minggu lalu
+              Pengguna dengan status aktif
             </p>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        {/* Charts */}
-        <Card className="col-span-4">
-          <CardHeader>
-            <CardTitle>Statistik Bulanan</CardTitle>
-            <CardDescription>
-              Pertumbuhan pengguna, postingan, dan komentar dalam 6 bulan
-              terakhir
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pl-2">
-            <ChartContainer config={chartConfig} className="h-[300px]">
-              <AreaChart data={mockChartData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <Area
-                  type="monotone"
-                  dataKey="users"
-                  stackId="1"
-                  stroke="var(--color-users)"
-                  fill="var(--color-users)"
-                  fillOpacity={0.6}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="posts"
-                  stackId="1"
-                  stroke="var(--color-posts)"
-                  fill="var(--color-posts)"
-                  fillOpacity={0.6}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="comments"
-                  stackId="1"
-                  stroke="var(--color-comments)"
-                  fill="var(--color-comments)"
-                  fillOpacity={0.6}
-                />
-              </AreaChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-
-        {/* Recent Activities */}
-        <Card className="col-span-3">
+      <div className="grid gap-4">
+        <Card>
           <CardHeader>
             <CardTitle>Aktivitas Terbaru</CardTitle>
             <CardDescription>
@@ -444,17 +262,17 @@ export default function AdminDashboardPage() {
               <div>
                 <h4 className="text-sm font-medium mb-3">Postingan Terbaru</h4>
                 <div className="space-y-3">
-                  {recentPosts.slice(0, 3).map((post) => (
+                  {posts.slice(0, 3).map((post) => (
                     <div key={post.id} className="flex items-center space-x-3">
                       <Avatar className="h-8 w-8">
                         <AvatarImage
-                          src={post.author.avatar || "/placeholder.svg"}
+                          src={post.author?.avatar || "/placeholder.svg"}
                         />
                         <AvatarFallback>
-                          {post.author.name
-                            .split(" ")
-                            .map((n) => n[0])
-                            .join("")}
+                          {post.author?.fullname
+                            ?.split(" ")
+                            .map((n: string) => n[0])
+                            .join("") || "U"}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 space-y-1">
@@ -462,15 +280,16 @@ export default function AdminDashboardPage() {
                           {post.title}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          oleh {post.author.name} • {formatDate(post.createdAt)}
+                          oleh {post.author?.fullname || "Unknown"} •{" "}
+                          {formatDate(post.createdAt)}
                         </p>
                       </div>
                       <Badge
                         variant={
-                          post.status === "published" ? "default" : "secondary"
+                          post.status === "PUBLISHED" ? "default" : "secondary"
                         }
                       >
-                        {post.status}
+                        {post.status === "PUBLISHED" ? "Terbit" : post.status}
                       </Badge>
                     </div>
                   ))}
@@ -482,29 +301,29 @@ export default function AdminDashboardPage() {
               <div>
                 <h4 className="text-sm font-medium mb-3">Komentar Terbaru</h4>
                 <div className="space-y-3">
-                  {recentComments.slice(0, 3).map((comment) => (
+                  {comments.slice(0, 3).map((comment) => (
                     <div
                       key={comment.id}
                       className="flex items-start space-x-3"
                     >
                       <Avatar className="h-8 w-8">
                         <AvatarImage
-                          src={comment.author.avatar || "/placeholder.svg"}
+                          src={comment.author?.avatar || "/placeholder.svg"}
                         />
                         <AvatarFallback>
-                          {comment.author.name
-                            .split(" ")
-                            .map((n) => n[0])
-                            .join("")}
+                          {comment.author?.fullname
+                            ?.split(" ")
+                            .map((n: string) => n[0])
+                            .join("") || "U"}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 space-y-1">
                         <p className="text-xs text-muted-foreground">
-                          {comment.postTitle}
+                          {comment.content || "Post tidak ditemukan"}
                         </p>
                         <p className="text-sm">{comment.content}</p>
                         <p className="text-xs text-muted-foreground">
-                          oleh {comment.author.name} •{" "}
+                          oleh {comment.author?.fullname || "Unknown"} •{" "}
                           {formatDate(comment.createdAt)}
                         </p>
                       </div>
@@ -513,53 +332,6 @@ export default function AdminDashboardPage() {
                 </div>
               </div>
             </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Additional Charts */}
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Postingan per Bulan</CardTitle>
-            <CardDescription>
-              Jumlah postingan yang dipublikasikan setiap bulan
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer config={chartConfig} className="h-[200px]">
-              <BarChart data={mockChartData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <Bar dataKey="posts" fill="var(--color-posts)" />
-              </BarChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Pertumbuhan Pengguna</CardTitle>
-            <CardDescription>Tren pertumbuhan pengguna baru</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer config={chartConfig} className="h-[200px]">
-              <LineChart data={mockChartData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <Line
-                  type="monotone"
-                  dataKey="users"
-                  stroke="var(--color-users)"
-                  strokeWidth={2}
-                  dot={{ fill: "var(--color-users)" }}
-                />
-              </LineChart>
-            </ChartContainer>
           </CardContent>
         </Card>
       </div>

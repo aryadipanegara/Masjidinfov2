@@ -5,15 +5,15 @@ import { Prisma } from "@prisma/client";
 
 const storage = multer.memoryStorage();
 
-const fileFilter: multer.Options["fileFilter"] = (req, file, cb) => {
-  const allowedMimeTypes = [
-    "image/jpeg",
-    "image/jpg",
-    "image/png",
-    "image/gif",
-    "image/webp",
-  ];
+const allowedMimeTypes = [
+  "image/jpeg",
+  "image/jpg",
+  "image/png",
+  "image/gif",
+  "image/webp",
+];
 
+const fileFilter: multer.Options["fileFilter"] = (req, file, cb) => {
   if (allowedMimeTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
@@ -27,10 +27,10 @@ const fileFilter: multer.Options["fileFilter"] = (req, file, cb) => {
 };
 
 export const upload = multer({
-  storage: storage,
-  fileFilter: fileFilter,
+  storage,
+  fileFilter,
   limits: {
-    fileSize: 5 * 1024 * 1024,
+    fileSize: 5 * 1024 * 1024, // 5MB
   },
 });
 
@@ -40,78 +40,134 @@ export const uploadImage = async (req: Request, res: Response) => {
     const { altText, caption, postId } = req.body;
     const userId = (req as any).user?.userId;
 
+    // 🔐 1. Validasi: User harus login
     if (!userId) {
-      return res
-        .status(401)
-        .json({ error: "Unauthorized: userId tidak ditemukan." });
-    }
-
-    if (!file) {
-      return res.status(400).json({
-        error:
-          "Gambar tidak ditemukan dalam request atau format file tidak didukung.",
+      return res.status(401).json({
+        error: "Unauthorized: Autentikasi diperlukan untuk upload gambar.",
       });
     }
 
+    // 📦 2. Validasi: File harus ada
+    if (!file) {
+      return res.status(400).json({
+        error: "Gambar tidak ditemukan dalam request.",
+      });
+    }
+
+    // 🧹 3. Normalisasi input (opsional, tapi aman)
+    const sanitizedAltText = altText ? String(altText).trim() : undefined;
+    const sanitizedCaption = caption ? String(caption).trim() : undefined;
+    const sanitizedPostId = postId ? String(postId).trim() : undefined;
+
+    // 🚀 4. Upload via service (akan validasi userId lagi + simpan)
     const image = await imageService.uploadImage(
       file.buffer,
       file.originalname,
       file.mimetype,
-      altText,
-      caption,
-      postId,
+      sanitizedAltText,
+      sanitizedCaption,
+      sanitizedPostId,
       userId
     );
 
-    res.status(201).json({
+    // ✅ 5. Response sukses
+    return res.status(201).json({
       message: "Gambar berhasil diupload",
       data: image,
     });
   } catch (error: any) {
     console.error("Upload Image Controller Error:", error);
 
+    // 🛑 Multer error (file size, format, etc)
     if (error instanceof multer.MulterError) {
       if (error.code === "LIMIT_FILE_SIZE") {
-        return res
-          .status(400)
-          .json({ error: "Ukuran file terlalu besar. Maksimal 5MB." });
+        return res.status(400).json({
+          error: "Ukuran file terlalu besar. Maksimal 5MB.",
+        });
       }
-
       return res.status(400).json({ error: error.message });
     }
 
-    if (error.message && error.message.includes("Tipe file tidak didukung")) {
+    // ❌ File type tidak didukung
+    if (error.message?.includes("Tipe file tidak didukung")) {
       return res.status(400).json({ error: error.message });
     }
 
+    // ⚠️ Unauthorized dari service
+    if (error.message?.includes("Unauthorized")) {
+      return res.status(401).json({ error: error.message });
+    }
+
+    // 🔒 User tidak ditemukan di database
+    if (error.message?.includes("User tidak ditemukan di database")) {
+      return res.status(401).json({ error: error.message });
+    }
+
+    // 🛢️ Prisma error (duplikat, dll)
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
       if (error.code === "P2002") {
-        return res
-          .status(409)
-          .json({ error: "Konflik data saat menyimpan gambar." });
+        return res.status(409).json({
+          error: "Gagal menyimpan: data gambar sudah ada.",
+        });
       }
     }
 
-    res.status(500).json({ error: error.message || "Gagal mengupload gambar" });
+    // 🐛 Error lain (internal)
+    return res.status(500).json({
+      error: "Gagal mengupload gambar. Silakan coba lagi.",
+      // Hanya kirim detail error di dev
+      ...(process.env.NODE_ENV === "development" && { debug: error.message }),
+    });
   }
 };
 
+type SortParam = "newest" | "oldest" | "order-asc" | "order-desc";
+const ALLOWED_SORT: SortParam[] = [
+  "newest",
+  "oldest",
+  "order-asc",
+  "order-desc",
+];
+
+const toBool = (v: unknown) => v === "true" || v === true;
+
 export const getImages = async (req: Request, res: Response) => {
   try {
-    const { postId } = req.query;
+    const {
+      page,
+      limit,
+      search,
+      postId,
+      uploadedById,
+      dateFrom,
+      dateTo,
+      sort,
+      includeDeleted,
+    } = req.query;
 
-    const images = await imageService.getImages(postId as string | undefined);
+    const sortSafe = ALLOWED_SORT.includes((sort as SortParam) || "order-asc")
+      ? (sort as SortParam)
+      : "order-asc";
 
-    res.status(200).json({
-      message: "Berhasil mengambil daftar gambar",
-      data: images,
-      count: images.length,
+    const result = await imageService.getImages({
+      page: page ? Number(page) : undefined,
+      limit: limit ? Number(limit) : undefined,
+      search: (search as string) || undefined,
+      postId: (postId as string) || undefined,
+      uploadedById: (uploadedById as string) || undefined,
+      dateFrom: (dateFrom as string) || undefined,
+      dateTo: (dateTo as string) || undefined,
+      sort: sortSafe,
+      includeDeleted: toBool(includeDeleted),
     });
+
+    // Konsisten dengan posts: { data: [...], pagination: {...} }
+    return res.status(200).json(result);
   } catch (error: any) {
     console.error("Get Images Controller Error:", error);
-    res
+    return res
       .status(500)
-      .json({ error: error.message || "Gagal mengambil daftar gambar" });
+      .json({ error: error?.message || "Gagal mengambil daftar gambar" });
   }
 };
 

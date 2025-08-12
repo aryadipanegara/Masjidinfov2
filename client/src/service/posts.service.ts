@@ -1,4 +1,3 @@
-// services/PostService.ts or "@/services/posts.service.ts"
 import AxiosInstance from "@/lib/axios";
 import {
   Post,

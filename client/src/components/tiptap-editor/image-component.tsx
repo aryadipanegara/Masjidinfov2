@@ -43,10 +43,7 @@ export const ImageComponent = ({
 
   const resizeRef = useRef<HTMLDivElement>(null);
 
-  // Log the readOnly prop to debug
   useEffect(() => {
-    console.log("ImageComponent: readOnly prop is", readOnly);
-    // If readOnly becomes true, ensure we are not in editing mode
     if (readOnly && isEditing) {
       setIsEditing(false);
     }
@@ -67,7 +64,7 @@ export const ImageComponent = ({
   };
 
   const handleMouseDown = (e: React.MouseEvent) => {
-    if (readOnly) return; // Prevent resizing in readOnly mode
+    if (readOnly) return;
 
     e.preventDefault();
     setIsResizing(true);
@@ -145,13 +142,11 @@ export const ImageComponent = ({
 
   return (
     <NodeViewWrapper className="my-4 text-center">
-      {/* Apply 'group' class only if not readOnly */}
       <div
         className={`relative border rounded-lg overflow-hidden max-w-[600px] mx-auto ${
           !readOnly ? "group" : ""
         }`}
       >
-        {/* Resizable Image Display */}
         <div
           className="relative inline-block"
           style={{

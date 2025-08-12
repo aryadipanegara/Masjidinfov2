@@ -88,7 +88,7 @@ export function PostDetailContent({ initialPost }: PostDetailContentProps) {
   const router = useRouter();
   const { user } = useAuth();
   const { showControls, setShowControls, isScrolledToBottom } =
-    useReaderControls(); // Destructure isScrolledToBottom
+    useReaderControls();
 
   const {
     data: post,
@@ -120,8 +120,8 @@ export function PostDetailContent({ initialPost }: PostDetailContentProps) {
   const [showCancelEditConfirm, setShowCancelEditConfirm] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
 
-  const commentSectionRef = useRef<HTMLDivElement>(null); // Ref untuk bagian komentar
-  const [isBottomNavAbsolute, setIsBottomNavAbsolute] = useState(false); // State untuk posisi navigasi bawah
+  const commentSectionRef = useRef<HTMLDivElement>(null);
+  const [isBottomNavAbsolute, setIsBottomNavAbsolute] = useState(false);
 
   const canEdit =
     user && ["EDITOR", "ADMIN", "SUPER_ADMIN"].includes(user.role);
@@ -146,18 +146,14 @@ export function PostDetailContent({ initialPost }: PostDetailContentProps) {
     }
   }, [post, hasChanges]);
 
-  // Efek untuk mengatur posisi navigasi bawah saat scroll
   useEffect(() => {
     const handleScrollPosition = () => {
       if (commentSectionRef.current) {
         const commentSectionTop =
           commentSectionRef.current.getBoundingClientRect().top;
         const viewportHeight = window.innerHeight;
-        const navHeight = 100; // Perkiraan tinggi navigasi bawah
+        const navHeight = 100;
 
-        // Jika bagian atas komentar sudah masuk ke dalam viewport,
-        // atau jika bagian bawah navigasi fixed akan tumpang tindih dengan komentar
-        // Kita ingin nav menjadi absolute ketika jaraknya 20px dari atas komentar
         if (commentSectionTop < viewportHeight - navHeight - 20) {
           setIsBottomNavAbsolute(true);
         } else {
@@ -167,7 +163,7 @@ export function PostDetailContent({ initialPost }: PostDetailContentProps) {
     };
 
     window.addEventListener("scroll", handleScrollPosition);
-    handleScrollPosition(); // Panggil sekali saat mount untuk posisi awal
+    handleScrollPosition();
 
     return () => {
       window.removeEventListener("scroll", handleScrollPosition);
@@ -192,7 +188,7 @@ export function PostDetailContent({ initialPost }: PostDetailContentProps) {
       setSelectedCategories(post.categories.map((cat) => cat.categoryId));
     }
     setShowCancelEditConfirm(false);
-    setShowControls(true); // Tampilkan kontrol setelah membatalkan edit
+    setShowControls(true);
   };
 
   const handleToggleEdit = () => {
@@ -201,11 +197,11 @@ export function PostDetailContent({ initialPost }: PostDetailContentProps) {
         setShowCancelEditConfirm(true);
       } else {
         setIsEditMode(false);
-        setShowControls(true); // Tampilkan kontrol setelah keluar mode edit
+        setShowControls(true);
       }
     } else {
       setIsEditMode(true);
-      setShowControls(false); // Sembunyikan kontrol saat masuk mode edit
+      setShowControls(false);
     }
   };
 
@@ -220,7 +216,7 @@ export function PostDetailContent({ initialPost }: PostDetailContentProps) {
       setHasChanges(false);
       notify.dismiss(loadingToastId);
       notify.success(response.data.message);
-      setShowControls(true); // Tampilkan kontrol setelah menyimpan
+      setShowControls(true);
     } catch (err) {
       handleErrorResponse(err, loadingToastId);
     } finally {

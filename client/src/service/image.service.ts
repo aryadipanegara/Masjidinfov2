@@ -30,8 +30,17 @@ export const ImageService = {
     return data;
   },
 
-  getAll: async (postId?: string): Promise<ImageListResponse> => {
-    const params = postId ? { postId } : {};
+  getAll: async (params?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    postId?: string;
+    uploadedById?: string;
+    sort?: "newest" | "oldest" | "order-asc" | "order-desc";
+    includeDeleted?: boolean;
+    dateFrom?: string;
+    dateTo?: string;
+  }): Promise<ImageListResponse> => {
     const { data } = await AxiosInstance.get<ImageListResponse>("/images", {
       params,
       withCredentials: true,

@@ -52,9 +52,8 @@ const POST_TYPES = [
 ];
 
 const POST_STATUS = [
-  { value: "draft", label: "Draft" },
-  { value: "published", label: "Published" },
-  { value: "archived", label: "Archived" },
+  { value: "DRAFT", label: "Draft" },
+  { value: "PUBLISHED", label: "Published" },
 ];
 
 export function CreateEditPostDialog({
@@ -171,7 +170,7 @@ export function CreateEditPostDialog({
 
     try {
       const response = await ImageService.upload(coverImageFile);
-      return response.data.data.url;
+      return response.data.url;
     } catch {
       throw new Error("Failed to upload cover image");
     }

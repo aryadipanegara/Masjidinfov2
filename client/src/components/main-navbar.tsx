@@ -34,6 +34,7 @@ import { debounce } from "lodash";
 import { Input } from "./ui/input";
 import { LoginDialog } from "./auth/login-dialog";
 import { RegisterDialog } from "./auth/register-dialog";
+import Image from "next/image";
 
 const navigation = [
   { name: "Beranda", href: "/", icon: HomeIcon },
@@ -49,8 +50,8 @@ export function MainNavbar() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
-  const [isLoginOpen, setIsLoginOpen] = useState(false); // Renamed for clarity
-  const [isRegisterOpen, setIsRegisterOpen] = useState(false); // New state for RegisterDialog
+  const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [isRegisterOpen, setIsRegisterOpen] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
 
   const { data: searchResults, isLoading: searchLoading } = useSWR(
@@ -81,7 +82,6 @@ export function MainNavbar() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // If we are on a dashboard or admin path, don't render the navbar
   if (pathname.startsWith("/dashboard") || pathname.startsWith("/(admin)")) {
     return null;
   }
@@ -118,15 +118,14 @@ export function MainNavbar() {
     setShowSearchResults(false);
   };
 
-  // Functions to switch between login and register dialogs
   const openLoginDialog = () => {
-    setIsRegisterOpen(false); // Close register dialog if open
-    setIsLoginOpen(true); // Open login dialog
+    setIsRegisterOpen(false);
+    setIsLoginOpen(true);
   };
 
   const openRegisterDialog = () => {
-    setIsLoginOpen(false); // Close login dialog if open
-    setIsRegisterOpen(true); // Open register dialog
+    setIsLoginOpen(false);
+    setIsRegisterOpen(true);
   };
 
   return (
@@ -135,9 +134,13 @@ export function MainNavbar() {
         <div className="container mx-auto px-4">
           <div className="flex h-16 items-center justify-between">
             <Link href="/" className="flex items-center space-x-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                <MapPinIcon className="h-5 w-5" />
-              </div>
+              <Image
+                src="/masjid.png"
+                alt="Logo Masjidinfo"
+                className="h-8 w-8 rounded-lg"
+                width={32}
+                height={32}
+              />
               <span className="text-xl font-bold">Masjidinfo</span>
             </Link>
             {/* Desktop Navigation */}

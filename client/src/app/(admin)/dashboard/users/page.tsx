@@ -5,39 +5,17 @@ import {
   Search,
   MoreHorizontal,
   Shield,
-  Ban,
-  RotateCcw,
-  Key,
-  Mail,
-  Calendar,
+  UserCheck,
+  UserX,
+  ChevronLeft,
+  ChevronRight,
+  Users,
+  CheckCircle,
 } from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   Select,
   SelectContent,
@@ -53,70 +31,41 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import type { UserDetail, UpdateUserPayload } from "@/types/user.types";
 import useSWR from "swr";
-import notify from "@/lib/notify";
-import handleErrorResponse from "@/utils/handleErrorResponse";
+import { toast as notify } from "sonner";
 import { UserService } from "@/service/users.service";
+import handleErrorResponse from "@/utils/handleErrorResponse";
 
-interface User {
-  id: string;
-  email: string;
-  fullname: string;
-  avatar?: string;
-  role: "SUPER_ADMIN" | "ADMIN" | "EDITOR" | "VIEWER";
-  isVerified: boolean;
-  isBanned: boolean;
-  bannedReason?: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-const USER_ROLES = [
-  { value: "all", label: "Semua Role" },
-  { value: "SUPER_ADMIN", label: "Super Admin" },
-  { value: "ADMIN", label: "Admin" },
-  { value: "EDITOR", label: "Editor" },
-  { value: "VIEWER", label: "Viewer" },
-];
-
-const USER_STATUS = [
-  { value: "all", label: "Semua Status" },
-  { value: "verified", label: "Terverifikasi" },
-  { value: "unverified", label: "Belum Verifikasi" },
-  { value: "banned", label: "Dibanned" },
-];
-
-const ROLE_OPTIONS = [
-  { value: "SUPER_ADMIN", label: "Super Admin" },
-  { value: "ADMIN", label: "Admin" },
-  { value: "EDITOR", label: "Editor" },
-  { value: "VIEWER", label: "Viewer" },
-];
-
-// SWR fetcher function
 const fetchUsers = async (url: string) => {
-  const [, searchQuery, selectedRole, selectedStatus, currentPage] =
-    url.split("|");
+  const [, searchQuery, currentPage] = url.split("|");
 
-  const params: any = {
-    page: Number.parseInt(currentPage) || 1,
+  const params: Record<string, string | number> = {
+    page: currentPage,
     limit: 10,
+    role: searchQuery === undefined ? "" : searchQuery,
   };
 
-  if (searchQuery && searchQuery !== "undefined") params.search = searchQuery;
+  if (searchQuery && searchQuery !== "undefined") {
+    params.search = searchQuery;
+  }
 
   const response = await UserService.getUsers(params);
   return response.data;
@@ -127,17 +76,15 @@ export default function UsersManagementPage() {
   const [selectedRole, setSelectedRole] = useState("all");
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [selectedUser, setSelectedUser] = useState<UserDetail | null>(null);
   const [isRoleDialogOpen, setIsRoleDialogOpen] = useState(false);
   const [isBanDialogOpen, setIsBanDialogOpen] = useState(false);
-  const [newRole, setNewRole] = useState<string>("");
+  const [newRole, setNewRole] = useState<string>("SUPER_ADMIN");
   const [banReason, setBanReason] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Create SWR key
   const swrKey = `users|${searchQuery}|${selectedRole}|${selectedStatus}|${currentPage}`;
 
-  // SWR hook for users data
   const {
     data: usersData,
     error,
@@ -148,8 +95,8 @@ export default function UsersManagementPage() {
   });
 
   const users = usersData?.data || [];
-  const totalPages = usersData?.pagination?.totalPages || 1;
-  const totalItems = usersData?.pagination?.totalItems || 0;
+  const totalPages = usersData?.paginations?.totalPages || 1;
+  const totalItems = usersData?.paginations?.totalItems || 0;
 
   const handleSearch = (value: string) => {
     setSearchQuery(value);
@@ -166,15 +113,15 @@ export default function UsersManagementPage() {
     setCurrentPage(1);
   };
 
-  const handleChangeRole = (user: User) => {
+  const handleChangeRole = (user: UserDetail) => {
     setSelectedUser(user);
     setNewRole(user.role);
     setIsRoleDialogOpen(true);
   };
 
-  const handleBanUser = (user: User) => {
+  const handleBanUser = (user: UserDetail) => {
     setSelectedUser(user);
-    setBanReason("");
+    setBanReason(user.bannedReason || "");
     setIsBanDialogOpen(true);
   };
 
@@ -185,7 +132,9 @@ export default function UsersManagementPage() {
     const toastId = notify.loading("Mengubah role pengguna...");
 
     try {
-      await UserService.updateUser(selectedUser.id, { role: newRole });
+      await UserService.updateUser(selectedUser.id, {
+        role: newRole as "ADMIN" | "EDITOR" | "VIEWER" | "SUPER_ADMIN",
+      });
       notify.success("Role pengguna berhasil diubah!", { id: toastId });
 
       mutateUsers();
@@ -203,68 +152,81 @@ export default function UsersManagementPage() {
     if (!selectedUser) return;
 
     setIsSubmitting(true);
+    const isCurrentlyBanned = selectedUser.isBanned;
     const toastId = notify.loading(
-      selectedUser.isBanned ? "Membatalkan ban..." : "Membanned pengguna..."
+      isCurrentlyBanned ? "Membatalkan ban..." : "Membanning pengguna..."
     );
 
     try {
-      if (selectedUser.isBanned) {
-        await UserService.updateUser(selectedUser.id, {
-          isBanned: false,
-          bannedReason: null,
-        });
-        notify.success("Ban pengguna berhasil dibatalkan!", { id: toastId });
-      } else {
-        await UserService.updateUser(selectedUser.id, {
-          isBanned: true,
-          bannedReason: banReason.trim() || "Melanggar ketentuan",
-        });
-        notify.success("Pengguna berhasil dibanned!", { id: toastId });
-      }
+      const updatePayload: UpdateUserPayload = {
+        isBanned: !isCurrentlyBanned,
+        bannedReason: isCurrentlyBanned
+          ? undefined
+          : banReason.trim() || "Melanggar ketentuan",
+      };
 
-      mutateUsers();
+      await UserService.updateUser(selectedUser.id, updatePayload);
+
+      notify.success(
+        isCurrentlyBanned
+          ? "Ban pengguna berhasil dibatalkan!"
+          : "Pengguna berhasil dibanned!",
+        {
+          id: toastId,
+        }
+      );
+
+      await mutateUsers();
       setIsBanDialogOpen(false);
       setSelectedUser(null);
       setBanReason("");
     } catch (error) {
+      console.error("Ban/Unban error:", error);
       handleErrorResponse(error, toastId);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("id-ID", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    });
-  };
-
   const getRoleBadge = (role: string) => {
-    const variants: Record<
-      string,
-      {
-        variant: "default" | "secondary" | "destructive" | "outline";
-        color: string;
-      }
-    > = {
-      SUPER_ADMIN: { variant: "destructive", color: "bg-red-100 text-red-800" },
-      ADMIN: { variant: "default", color: "bg-blue-100 text-blue-800" },
-      EDITOR: { variant: "secondary", color: "bg-green-100 text-green-800" },
-      VIEWER: { variant: "outline", color: "bg-gray-100 text-gray-800" },
+    const roleConfig = {
+      SUPER_ADMIN: { label: "Super Admin", variant: "destructive" as const },
+      ADMIN: { label: "Admin", variant: "default" as const },
+      EDITOR: { label: "Editor", variant: "secondary" as const },
+      VIEWER: { label: "Viewer", variant: "outline" as const },
     };
-    const config = variants[role] || variants.VIEWER;
-    return <Badge className={config.color}>{role}</Badge>;
+
+    const config = roleConfig[role as keyof typeof roleConfig] || {
+      label: role,
+      variant: "outline" as const,
+    };
+
+    return (
+      <Badge variant={config.variant} className="text-xs">
+        {config.label}
+      </Badge>
+    );
   };
 
-  const getStatusBadges = (user: User) => {
+  const getStatusBadges = (user: UserDetail) => {
     const badges = [];
 
     if (user.isBanned) {
       badges.push(
-        <Badge key="banned" variant="destructive">
+        <Badge
+          key="banned"
+          variant="destructive"
+          className="text-xs font-medium"
+        >
+          <UserX className="w-3 h-3 mr-1" />
           Banned
+        </Badge>
+      );
+    } else {
+      badges.push(
+        <Badge key="active" variant="secondary" className="text-xs font-medium">
+          <CheckCircle className="w-3 h-3 mr-1" />
+          Active
         </Badge>
       );
     }
@@ -274,15 +236,10 @@ export default function UsersManagementPage() {
         <Badge
           key="verified"
           variant="default"
-          className="bg-green-100 text-green-800"
+          className="text-xs bg-blue-100 text-blue-800 hover:bg-blue-200"
         >
+          <Shield className="w-3 h-3 mr-1" />
           Verified
-        </Badge>
-      );
-    } else {
-      badges.push(
-        <Badge key="unverified" variant="outline">
-          Unverified
         </Badge>
       );
     }
@@ -323,13 +280,63 @@ export default function UsersManagementPage() {
         </p>
       </div>
 
-      {/* Filters and Search */}
+      {/* Stats Cards */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Total Pengguna
+            </CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalItems}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Terverifikasi</CardTitle>
+            <UserCheck className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {users.filter((u: UserDetail) => u.isVerified).length}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Banned</CardTitle>
+            <UserX className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {users.filter((u: UserDetail) => u.isBanned).length}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Admin</CardTitle>
+            <Shield className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {
+                users.filter(
+                  (u: UserDetail) =>
+                    u.role === "ADMIN" || u.role === "SUPER_ADMIN"
+                ).length
+              }
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Filters */}
       <Card>
         <CardHeader>
-          <CardTitle>Filter & Pencarian</CardTitle>
-          <CardDescription>
-            Cari dan filter pengguna berdasarkan role dan status
-          </CardDescription>
+          <CardTitle>Filter Pengguna</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex flex-col md:flex-row gap-4">
@@ -345,27 +352,27 @@ export default function UsersManagementPage() {
               </div>
             </div>
             <Select value={selectedRole} onValueChange={handleRoleFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Pilih Role" />
+              <SelectTrigger className="w-full md:w-[180px]">
+                <SelectValue placeholder="Semua Role" />
               </SelectTrigger>
               <SelectContent>
-                {USER_ROLES.map((role) => (
-                  <SelectItem key={role.value} value={role.value}>
-                    {role.label}
-                  </SelectItem>
-                ))}
+                <SelectItem value="all">Semua Role</SelectItem>
+                <SelectItem value="SUPER_ADMIN">Super Admin</SelectItem>
+                <SelectItem value="ADMIN">Admin</SelectItem>
+                <SelectItem value="EDITOR">Editor</SelectItem>
+                <SelectItem value="VIEWER">Viewer</SelectItem>
               </SelectContent>
             </Select>
             <Select value={selectedStatus} onValueChange={handleStatusFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Pilih Status" />
+              <SelectTrigger className="w-full md:w-[180px]">
+                <SelectValue placeholder="Semua Status" />
               </SelectTrigger>
               <SelectContent>
-                {USER_STATUS.map((status) => (
-                  <SelectItem key={status.value} value={status.value}>
-                    {status.label}
-                  </SelectItem>
-                ))}
+                <SelectItem value="all">Semua Status</SelectItem>
+                <SelectItem value="verified">Terverifikasi</SelectItem>
+                <SelectItem value="unverified">Belum Terverifikasi</SelectItem>
+                <SelectItem value="banned">Banned</SelectItem>
+                <SelectItem value="active">Aktif</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -375,25 +382,13 @@ export default function UsersManagementPage() {
       {/* Users Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Daftar Pengguna ({totalItems} total)</CardTitle>
+          <CardTitle>Daftar Pengguna</CardTitle>
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="space-y-4">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="flex items-center space-x-4">
-                  <Skeleton className="h-12 w-12 rounded-full" />
-                  <div className="space-y-2 flex-1">
-                    <Skeleton className="h-4 w-[200px]" />
-                    <Skeleton className="h-4 w-[150px]" />
-                  </div>
-                  <Skeleton className="h-6 w-[80px]" />
-                  <Skeleton className="h-8 w-8" />
-                </div>
-              ))}
-            </div>
+            <div className="text-center py-8">Loading...</div>
           ) : (
-            <div className="rounded-md border">
+            <>
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -405,32 +400,47 @@ export default function UsersManagementPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {users.map((user: User) => (
-                    <TableRow key={user.id}>
-                      <TableCell>
+                  {users.map((user: UserDetail) => (
+                    <TableRow
+                      key={user.id}
+                      className={
+                        user.isBanned
+                          ? "bg-red-50 hover:bg-red-100"
+                          : "hover:bg-gray-50"
+                      }
+                    >
+                      <TableCell className="font-medium">
                         <div className="flex items-center space-x-3">
-                          <Avatar className="h-10 w-10">
+                          <Avatar className="h-8 w-8">
                             <AvatarImage
                               src={user.avatar || "/placeholder.svg"}
+                              alt={user.fullname}
                             />
                             <AvatarFallback>
                               {user.fullname
                                 .split(" ")
                                 .map((n) => n[0])
-                                .join("")}
+                                .join("")
+                                .toUpperCase()}
                             </AvatarFallback>
                           </Avatar>
                           <div>
-                            <p className="font-medium">{user.fullname}</p>
-                            <p className="text-sm text-muted-foreground flex items-center">
-                              <Mail className="h-3 w-3 mr-1" />
+                            <div
+                              className={`font-medium ${
+                                user.isBanned ? "text-red-700" : ""
+                              }`}
+                            >
+                              {user.fullname}
+                            </div>
+                            <div
+                              className={`text-sm ${
+                                user.isBanned
+                                  ? "text-red-600"
+                                  : "text-muted-foreground"
+                              }`}
+                            >
                               {user.email}
-                            </p>
-                            {user.isBanned && user.bannedReason && (
-                              <p className="text-xs text-red-600 mt-1">
-                                Alasan: {user.bannedReason}
-                              </p>
-                            )}
+                            </div>
                           </div>
                         </div>
                       </TableCell>
@@ -440,11 +450,8 @@ export default function UsersManagementPage() {
                           {getStatusBadges(user)}
                         </div>
                       </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        <div className="flex items-center">
-                          <Calendar className="h-3 w-3 mr-1" />
-                          {formatDate(user.createdAt)}
-                        </div>
+                      <TableCell>
+                        {new Date(user.createdAt).toLocaleDateString("id-ID")}
                       </TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
@@ -454,7 +461,6 @@ export default function UsersManagementPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Aksi</DropdownMenuLabel>
                             <DropdownMenuItem
                               onClick={() => handleChangeRole(user)}
                             >
@@ -463,23 +469,23 @@ export default function UsersManagementPage() {
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => handleBanUser(user)}
+                              className={
+                                user.isBanned
+                                  ? "text-green-600"
+                                  : "text-red-600"
+                              }
                             >
                               {user.isBanned ? (
                                 <>
-                                  <RotateCcw className="mr-2 h-4 w-4 text-green-600" />
-                                  Unban
+                                  <UserCheck className="mr-2 h-4 w-4" />
+                                  Unban Pengguna
                                 </>
                               ) : (
                                 <>
-                                  <Ban className="mr-2 h-4 w-4 text-red-600" />
-                                  Ban
+                                  <UserX className="mr-2 h-4 w-4" />
+                                  Ban Pengguna
                                 </>
                               )}
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem>
-                              <Key className="mr-2 h-4 w-4" />
-                              Reset Password
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -488,131 +494,167 @@ export default function UsersManagementPage() {
                   ))}
                 </TableBody>
               </Table>
-            </div>
-          )}
 
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between space-x-2 py-4">
-              <div className="text-sm text-muted-foreground">
-                Halaman {currentPage} dari {totalPages}
+              {/* Pagination */}
+              <div className="flex items-center justify-between space-x-2 py-4">
+                <div className="text-sm text-muted-foreground">
+                  Menampilkan {users.length} dari {totalItems} pengguna
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                    disabled={currentPage <= 1}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    Sebelumnya
+                  </Button>
+                  <div className="text-sm">
+                    Halaman {currentPage} dari {totalPages}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() =>
+                      setCurrentPage(Math.min(totalPages, currentPage + 1))
+                    }
+                    disabled={currentPage >= totalPages}
+                  >
+                    Selanjutnya
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
-              <div className="flex space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(currentPage - 1)}
-                  disabled={currentPage === 1}
-                >
-                  Previous
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setCurrentPage(currentPage + 1)}
-                  disabled={currentPage === totalPages}
-                >
-                  Next
-                </Button>
-              </div>
-            </div>
+            </>
           )}
         </CardContent>
       </Card>
 
-      {/* Change Role Dialog */}
+      {/* Role Change Dialog */}
       <Dialog open={isRoleDialogOpen} onOpenChange={setIsRoleDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Ubah Role Pengguna</DialogTitle>
             <DialogDescription>
-              Ubah role untuk {selectedUser?.fullname} ({selectedUser?.email})
+              Ubah role untuk {selectedUser?.fullname}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Role Baru</Label>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="role" className="text-right">
+                Role
+              </Label>
               <Select value={newRole} onValueChange={setNewRole}>
-                <SelectTrigger>
-                  <SelectValue />
+                <SelectTrigger className="col-span-3">
+                  <SelectValue placeholder="Pilih role" />
                 </SelectTrigger>
                 <SelectContent>
-                  {ROLE_OPTIONS.map((role) => (
-                    <SelectItem key={role.value} value={role.value}>
-                      {role.label}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="SUPER_ADMIN">Super Admin</SelectItem>
+                  <SelectItem value="ADMIN">Admin</SelectItem>
+                  <SelectItem value="EDITOR">Editor</SelectItem>
+                  <SelectItem value="VIEWER">Viewer</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
           <DialogFooter>
             <Button
-              variant="outline"
-              onClick={() => setIsRoleDialogOpen(false)}
+              type="submit"
+              onClick={handleSubmitRoleChange}
               disabled={isSubmitting}
             >
-              Batal
-            </Button>
-            <Button
-              onClick={handleSubmitRoleChange}
-              disabled={isSubmitting || !newRole}
-            >
-              {isSubmitting ? "Mengubah..." : "Ubah Role"}
+              {isSubmitting ? "Menyimpan..." : "Simpan Perubahan"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Ban/Unban Dialog */}
-      <AlertDialog open={isBanDialogOpen} onOpenChange={setIsBanDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {selectedUser?.isBanned
-                ? "Batalkan Ban Pengguna"
-                : "Ban Pengguna"}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {selectedUser?.isBanned
-                ? `Apakah Anda yakin ingin membatalkan ban untuk ${selectedUser?.fullname}?`
-                : `Apakah Anda yakin ingin memban ${selectedUser?.fullname}?`}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          {!selectedUser?.isBanned && (
-            <div className="space-y-2">
-              <Label htmlFor="banReason">Alasan Ban</Label>
-              <Textarea
-                id="banReason"
-                value={banReason}
-                onChange={(e) => setBanReason(e.target.value)}
-                placeholder="Masukkan alasan ban (opsional)"
-                rows={3}
-              />
-            </div>
-          )}
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isSubmitting}>Batal</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleSubmitBan}
-              disabled={isSubmitting}
+      <Dialog open={isBanDialogOpen} onOpenChange={setIsBanDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle
               className={
-                selectedUser?.isBanned
-                  ? "bg-green-600 hover:bg-green-700"
-                  : "bg-red-600 hover:bg-red-700"
+                selectedUser?.isBanned ? "text-green-600" : "text-red-600"
               }
             >
-              {isSubmitting
-                ? selectedUser?.isBanned
-                  ? "Membatalkan..."
-                  : "Membanning..."
-                : selectedUser?.isBanned
-                ? "Batalkan Ban"
-                : "Ban Pengguna"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+              {selectedUser?.isBanned ? (
+                <div className="flex items-center">
+                  <UserCheck className="mr-2 h-5 w-5" />
+                  Unban Pengguna
+                </div>
+              ) : (
+                <div className="flex items-center">
+                  <UserX className="mr-2 h-5 w-5" />
+                  Ban Pengguna
+                </div>
+              )}
+            </DialogTitle>
+            <DialogDescription>
+              {selectedUser?.isBanned
+                ? `Batalkan ban untuk ${selectedUser?.fullname}? Pengguna akan dapat mengakses sistem kembali.`
+                : `Ban pengguna ${selectedUser?.fullname}? Pengguna tidak akan dapat mengakses sistem.`}
+            </DialogDescription>
+          </DialogHeader>
+
+          {!selectedUser?.isBanned && (
+            <div className="grid gap-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="reason">Alasan Ban *</Label>
+                <Textarea
+                  id="reason"
+                  value={banReason}
+                  onChange={(e) => setBanReason(e.target.value)}
+                  placeholder="Masukkan alasan ban..."
+                  className="min-h-[80px]"
+                  required
+                />
+              </div>
+            </div>
+          )}
+
+          {selectedUser?.isBanned && selectedUser.bannedReason && (
+            <div className="grid gap-4 py-4">
+              <div className="space-y-2">
+                <Label>Alasan Ban Saat Ini:</Label>
+                <div className="p-3 bg-red-50 border border-red-200 rounded-md text-sm text-red-800">
+                  {selectedUser.bannedReason}
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsBanDialogOpen(false)}
+              disabled={isSubmitting}
+            >
+              Batal
+            </Button>
+            <Button
+              type="submit"
+              onClick={handleSubmitBan}
+              disabled={
+                isSubmitting || (!selectedUser?.isBanned && !banReason.trim())
+              }
+              variant={selectedUser?.isBanned ? "default" : "destructive"}
+            >
+              {isSubmitting ? (
+                <div className="flex items-center">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  {selectedUser?.isBanned ? "Membatalkan..." : "Membanning..."}
+                </div>
+              ) : selectedUser?.isBanned ? (
+                "Unban Pengguna"
+              ) : (
+                "Ban Pengguna"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

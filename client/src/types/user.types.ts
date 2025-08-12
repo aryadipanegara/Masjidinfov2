@@ -9,6 +9,9 @@ export type UserDetail = {
   createdAt: string;
   updatedAt: string;
   hasPassword?: boolean;
+  isBanned?: boolean;
+  bannedAt?: string | null;
+  bannedReason?: string | null;
 };
 
 export type UpdateUserPayload = Partial<

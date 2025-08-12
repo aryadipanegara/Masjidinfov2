@@ -48,14 +48,14 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import useSWR from "swr";
-import { CommentService } from "@/service/comment.service";
+import AxiosInstance from "@/lib/axios";
 
 interface Comment {
   id: string;
   content: string;
   author: {
     id: string;
-    name: string;
+    fullname: string;
     email: string;
     avatar?: string;
   };
@@ -79,17 +79,22 @@ const COMMENT_STATUS = [
   { value: "flagged", label: "Dilaporkan" },
 ];
 
+// Direct API calls to avoid service import issues
 const fetchComments = async (url: string) => {
   const [, searchQuery, selectedStatus] = url.split("|");
 
-  const response = await CommentService.getAll({ page: 1, limit: 10 });
-  let filteredComments = response.data.data;
+  const response = await AxiosInstance.get("/comments", {
+    params: { page: 1, limit: 10 },
+  });
+  let filteredComments = response.data.data || [];
 
   if (searchQuery && searchQuery !== "undefined") {
     filteredComments = filteredComments.filter(
-      (comment) =>
+      (comment: Comment) =>
         comment.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        comment.author.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        comment.author.fullname
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase()) ||
         comment.post.title.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }
@@ -98,17 +103,17 @@ const fetchComments = async (url: string) => {
     switch (selectedStatus) {
       case "approved":
         filteredComments = filteredComments.filter(
-          (comment) => comment.isApproved
+          (comment: Comment) => comment.isApproved
         );
         break;
       case "pending":
         filteredComments = filteredComments.filter(
-          (comment) => !comment.isApproved && !comment.isFlagged
+          (comment: Comment) => !comment.isApproved && !comment.isFlagged
         );
         break;
       case "flagged":
         filteredComments = filteredComments.filter(
-          (comment) => comment.isFlagged
+          (comment: Comment) => comment.isFlagged
         );
         break;
     }
@@ -123,6 +128,28 @@ const fetchComments = async (url: string) => {
       itemsPerPage: 10,
     },
   };
+};
+
+// Inline utility functions
+const getStatusBadge = (comment: Comment) => {
+  if (comment.isFlagged) {
+    return <Badge variant="destructive">Dilaporkan</Badge>;
+  }
+  if (comment.isApproved) {
+    return <Badge variant="default">Disetujui</Badge>;
+  }
+  return <Badge variant="secondary">Menunggu</Badge>;
+};
+
+const detectSuspiciousContent = (content: string): boolean => {
+  const suspiciousPatterns = [
+    /https?:\/\/[^\s]+/gi, // URLs
+    /spam/gi,
+    /click here/gi,
+    /free money/gi,
+    /win now/gi,
+  ];
+  return suspiciousPatterns.some((pattern) => pattern.test(content));
 };
 
 export default function CommentsManagementPage() {
@@ -140,7 +167,7 @@ export default function CommentsManagementPage() {
     mutate: mutateComments,
   } = useSWR(swrKey, fetchComments, {
     revalidateOnFocus: false,
-    refreshInterval: 30000, // Refresh every 30 seconds
+    refreshInterval: 30000,
   });
 
   const comments = commentsData?.data || [];
@@ -159,7 +186,7 @@ export default function CommentsManagementPage() {
 
   const handleApproveComment = async (commentId: string) => {
     try {
-      // Mock API call - replace with actual implementation
+      // Mock implementation - replace with actual API call
       console.log("Approving comment:", commentId);
       mutateComments();
     } catch (error) {
@@ -169,7 +196,7 @@ export default function CommentsManagementPage() {
 
   const handleFlagComment = async (commentId: string) => {
     try {
-      // Mock API call - replace with actual implementation
+      // Mock implementation - replace with actual API call
       console.log("Flagging comment:", commentId);
       mutateComments();
     } catch (error) {
@@ -179,7 +206,7 @@ export default function CommentsManagementPage() {
 
   const handleDeleteComment = async (commentId: string) => {
     try {
-      await CommentService.delete(commentId);
+      await AxiosInstance.delete(`/comments/${commentId}`);
       mutateComments();
       setDeleteCommentId(null);
     } catch (error) {
@@ -195,28 +222,6 @@ export default function CommentsManagementPage() {
       hour: "2-digit",
       minute: "2-digit",
     });
-  };
-
-  const getStatusBadge = (comment: Comment) => {
-    if (comment.isFlagged) {
-      return <Badge variant="destructive">Dilaporkan</Badge>;
-    }
-    if (comment.isApproved) {
-      return <Badge variant="default">Disetujui</Badge>;
-    }
-    return <Badge variant="secondary">Menunggu</Badge>;
-  };
-
-  const detectSuspiciousContent = (content: string) => {
-    const suspiciousPatterns = [
-      /https?:\/\/[^\s]+/gi, // URLs
-      /spam/gi,
-      /click here/gi,
-      /free money/gi,
-      /win now/gi,
-    ];
-
-    return suspiciousPatterns.some((pattern) => pattern.test(content));
   };
 
   if (error) {
@@ -287,7 +292,7 @@ export default function CommentsManagementPage() {
         </CardContent>
       </Card>
 
-      {/* Comments Table */}
+      {/* Comments List */}
       <Card>
         <CardHeader>
           <CardTitle>Daftar Komentar ({totalItems} total)</CardTitle>
@@ -312,7 +317,7 @@ export default function CommentsManagementPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              {comments.map((comment) => (
+              {comments.map((comment: Comment) => (
                 <div
                   key={comment.id}
                   className={`p-4 border rounded-lg ${
@@ -335,7 +340,9 @@ export default function CommentsManagementPage() {
                       </Avatar>
                       <div className="flex-1 space-y-2">
                         <div className="flex items-center space-x-2">
-                          <p className="font-medium">{comment.author.name}</p>
+                          <p className="font-medium">
+                            {comment.author.fullname}
+                          </p>
                           <p className="text-sm text-muted-foreground">
                             {comment.author.email}
                           </p>

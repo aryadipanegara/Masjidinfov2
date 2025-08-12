@@ -1,6 +1,8 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "../config/prisma.config";
 import fs from "fs";
 import path from "path";
+import { GetImagesOptions } from "../types/image.types";
 
 const UPLOAD_DIR = path.join(__dirname, "../../public/images");
 const PUBLIC_URL_PREFIX = "/images";
@@ -31,17 +33,32 @@ export const imageService = {
     altText?: string,
     caption?: string,
     postId?: string,
-    userId?: string
+    userId?: string // ⚠️ ini bisa undefined/null
   ) => {
     if (!originalname || !mimetype) {
       throw new Error("Nama file dan tipe mime diperlukan.");
     }
+
     if (!isAllowedMimeType(mimetype)) {
       throw new Error(
         `Tipe file tidak didukung: ${mimetype}. Hanya ${ALLOWED_MIME_TYPES.join(
           ", "
         )} yang diperbolehkan.`
       );
+    }
+
+    // 🔥 VALIDASI: userId WAJIB ADA
+    if (!userId) {
+      throw new Error("Unauthorized: User tidak terautentikasi.");
+    }
+
+    // Opsional: Cek apakah user benar-benar ada di database
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new Error("Unauthorized: User tidak ditemukan di database.");
     }
 
     try {
@@ -64,7 +81,7 @@ export const imageService = {
           altText: altText || null,
           caption: caption || null,
           postId: postId || null,
-          uploadedById: userId || null,
+          uploadedById: userId, // ✅ sekarang pasti ada
         },
       });
 
@@ -76,37 +93,88 @@ export const imageService = {
       );
     }
   },
+  getImages: async (opts: GetImagesOptions = {}) => {
+    const {
+      page = 1,
+      limit = 12,
+      search = "",
+      postId,
+      uploadedById,
+      includeDeleted = false,
+      dateFrom,
+      dateTo,
+      sort = "order-asc",
+    } = opts;
 
-  getImages: async (postId?: string) => {
-    return prisma.image.findMany({
-      where: {
-        isDeleted: false,
-        ...(postId ? { postId } : {}),
-      },
-      orderBy: { order: "asc" },
-      include: {
-        uploadedBy: {
-          select: {
-            id: true,
-            fullname: true,
-            avatar: true,
-          },
+    const safePage = Number.isFinite(page) && page > 0 ? page : 1;
+    const safeLimit = Number.isFinite(limit) && limit > 0 ? limit : 12;
+    const skip = (safePage - 1) * safeLimit;
+
+    const where: Prisma.ImageWhereInput = {
+      ...(includeDeleted ? {} : { isDeleted: false }),
+      ...(postId ? { postId } : {}),
+      ...(uploadedById ? { uploadedById } : {}),
+      ...(search
+        ? {
+            OR: [
+              { caption: { contains: search, mode: "insensitive" } },
+              { altText: { contains: search, mode: "insensitive" } },
+            ],
+          }
+        : {}),
+      ...((dateFrom || dateTo) && {
+        uploadedAt: {
+          ...(dateFrom ? { gte: new Date(dateFrom) } : {}),
+          ...(dateTo ? { lte: new Date(dateTo) } : {}),
         },
+      }),
+    };
+
+    const orderBy: Prisma.ImageOrderByWithRelationInput[] = (() => {
+      switch (sort) {
+        case "newest":
+          return [{ uploadedAt: "desc" }];
+        case "oldest":
+          return [{ uploadedAt: "asc" }];
+        case "order-desc":
+          return [{ order: "desc" }, { uploadedAt: "desc" }];
+        case "order-asc":
+        default:
+          return [{ order: "asc" }, { uploadedAt: "desc" }];
+      }
+    })();
+
+    const [totalItems, images] = await Promise.all([
+      prisma.image.count({ where }),
+      prisma.image.findMany({
+        where,
+        skip,
+        take: safeLimit,
+        orderBy,
+        include: {
+          uploadedBy: { select: { id: true, fullname: true, avatar: true } },
+        },
+      }),
+    ]);
+
+    return {
+      data: images,
+      pagination: {
+        currentPage: safePage,
+        totalPages: Math.ceil(totalItems / safeLimit),
+        totalItems,
+        itemsPerPage: safeLimit,
+        hasNextPage: skip + images.length < totalItems,
+        hasPrevPage: safePage > 1,
       },
-    });
+    };
   },
 
-  getImageById: async (id: string) => {
-    return prisma.image.findUnique({
-      where: { id, isDeleted: false },
+  getImageById: async (id: string, includeDeleted = false) => {
+    return prisma.image.findFirst({
+      where: { id, ...(includeDeleted ? {} : { isDeleted: false }) },
       include: {
-        uploadedBy: {
-          select: {
-            id: true,
-            fullname: true,
-            avatar: true,
-          },
-        },
+        uploadedBy: { select: { id: true, fullname: true, avatar: true } },
       },
     });
   },
